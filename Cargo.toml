@@ -1,0 +1,33 @@
+[package]
+name = "oa-sample-analyzer"
+version = "0.1.0"
+edition = "2021"
+description = "Fast parallel audio-sample analyzer (length, pitch, spectral complexity) -> .PEAK JSON"
+
+[[bin]]
+name = "oa_sample_analyzer"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+
+[build-dependencies]
+# Used only to minify the UCS bundle as it is spliced. Build-time only: nothing
+# here is linked into the analyzer or the WASM engine.
+serde_json = "1"
+
+[dependencies]
+# The shared cutting DSP — regions.rs delegates region detection here so the stored .PEAK
+# regions and the interactive web Extractor run one implementation (no TS/Rust drift).
+extractor_engine = { path = "../SCANALIZER.Extractor-Engine" }
+hound = "3.5"
+rustfft = "6.2"
+walkdir = "2.5"
+rayon = "1.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ebur128 = "0.1"
+symphonia = { version = "0.5", features = ["mp3", "flac", "aiff", "isomp4", "aac", "alac", "ogg", "vorbis", "wav", "pcm"] }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = { version = "2.9", features = ["json"] }

@@ -6,7 +6,7 @@
   "subGroup": "DSP Core",
   "kind": "rust",
   "class": "execution",
-  "entry": "sample_analyzer_rs/src/main.rs",
+  "entry": "SCANALYZER:softapps/SCANALIZER.SampleAnalyzer-Engine/src/main.rs",
   "description": "Rust CLI & WASM binary that walks audio libraries, calculates 40+ DSP feature dimensions (MFCCs, spectral flux, kurtosis, VAD, attack/decay), and writes .PEAK sidecars.",
   "topic": "APK.audio/Gui/Display/SampleAnalyzer_Engine",
   "autostart": false

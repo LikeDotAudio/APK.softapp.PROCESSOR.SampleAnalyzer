@@ -1,0 +1,152 @@
+{
+  "version": "2.0",
+  "category": "MUSICPROD",
+  "matchable": false,
+  "description": [
+    "The music-production taxonomy: a producer's drum-sampler view of a sample, sitting",
+    "beside the UCS category on every record. Unlike a UCS category (guessed from the sound",
+    "via acoustic signatures), a production role is read from the FILE NAME — a 'Conga' is a",
+    "conga because the name says so — so this file carries synonyms and the producer",
+    "file-name shorthand, not priors and gates.",
+    "",
+    "`families` are the top-level groups in display order, each with a colour hue (null = the",
+    "grey ramp). `instruments` are matched top-to-bottom, MOST SPECIFIC FIRST, so their order",
+    "is match priority and is deliberately NOT the family display order — Kick sits before 808",
+    "so 'BD_808' is a kick, 808 before Bass so 'Bass_808' is an 808, Bass before the generic",
+    "Perc so 'slap bass' is a bass while a bare 'slap' is percussion.",
+    "",
+    "Per instrument: `phrases` match as substrings of the normalized name, `abbrevs` as whole",
+    "tokens (so 'bd' hits 'BD_01' but not 'bird'). `variations` are curated shades of one",
+    "instrument (a snare's rimshot, a hi-hat's closed) and are tried before the base."
+  ],
+  "families": [
+    { "family": "CORE KIT", "hue": 0.02, "percussive": true },
+    { "family": "CYMBALS & METALS", "hue": 0.12, "percussive": true },
+    { "family": "HAND PERCUSSION", "hue": 0.21, "percussive": true },
+    { "family": "WORLD & REGIONAL", "hue": 0.33, "percussive": true },
+    { "family": "ORCHESTRAL & PITCHED", "hue": 0.45 },
+    { "family": "ELECTRONIC & DESIGN", "hue": 0.55 },
+    { "family": "MELODIC", "hue": 0.68 },
+    { "family": "IMPULSE RESPONSE", "hue": 0.80 },
+    { "family": "LOOP", "hue": 0.90 },
+    { "family": "MISC", "hue": null }
+  ],
+  "instruments": [
+    { "instrument": "IR", "family": "IMPULSE RESPONSE",
+      "phrases": ["impulse response", "impulse", "convolution", "convol", "cabinet", "guitar cab", "reverb ir"],
+      "abbrevs": ["ir", "cab", "conv"] },
+
+    { "instrument": "Kick", "family": "CORE KIT",
+      "phrases": ["kick", "kik", "bass drum", "bassdrum", "bassdrm", "bass drm", "bdrum"],
+      "abbrevs": ["bd", "kck", "kik", "kic", "kk", "bassd", "bdr"] },
+    { "instrument": "Snare", "family": "CORE KIT",
+      "phrases": ["snare"], "abbrevs": ["sd", "sn", "snr"],
+      "variations": [
+        { "name": "Rimshot", "phrases": ["rimshot", "rim shot"], "abbrevs": ["rim", "rs", "rimsh"] },
+        { "name": "Cross-stick", "phrases": ["cross stick", "crossstick", "side stick", "sidestick"], "abbrevs": ["xstk", "xs", "xstick"] }
+      ] },
+    { "instrument": "Clap", "family": "CORE KIT",
+      "phrases": ["handclap", "hand clap", "clap"], "abbrevs": ["cp", "clp"] },
+    { "instrument": "Snap", "family": "CORE KIT",
+      "phrases": ["finger snap", "fingersnap", "snap"], "abbrevs": ["fngr", "snp"] },
+    { "instrument": "Hi-Hat", "family": "CORE KIT",
+      "phrases": ["hihat", "hi hat", "hats", "hat", "hh"], "abbrevs": [],
+      "variations": [
+        { "name": "Closed", "phrases": ["closed hat", "closed hi hat", "closed hihat"], "abbrevs": ["chh", "ch"] },
+        { "name": "Open", "phrases": ["open hat", "open hi hat", "open hihat"], "abbrevs": ["ohh", "oh"] },
+        { "name": "Pedal", "phrases": ["pedal hat", "foot hat", "pedal hi hat"], "abbrevs": ["phh", "ph"] }
+      ] },
+    { "instrument": "Tom", "family": "CORE KIT",
+      "phrases": ["tom"], "abbrevs": ["tm"],
+      "variations": [
+        { "name": "Hi", "phrases": ["high tom", "hi tom", "rack tom 1", "tom 1", "hitom"], "abbrevs": ["ht", "t1", "hitom"] },
+        { "name": "Mid", "phrases": ["mid tom", "middle tom", "rack tom 2", "tom 2", "midtom"], "abbrevs": ["mt", "t2", "midtom"] },
+        { "name": "Floor", "phrases": ["floor tom", "low tom", "tom 3", "lotom", "floortom"], "abbrevs": ["ft", "lt", "t3", "lotom"] }
+      ] },
+
+    { "instrument": "Crash", "family": "CYMBALS & METALS",
+      "phrases": ["crash cymbal", "crash"], "abbrevs": ["crsh", "cc"] },
+    { "instrument": "Ride Bell", "family": "CYMBALS & METALS",
+      "phrases": ["ride bell", "bell cymbal"], "abbrevs": ["rdb"] },
+    { "instrument": "Ride", "family": "CYMBALS & METALS",
+      "phrases": ["ride cymbal", "ride"], "abbrevs": ["rd", "rc"] },
+    { "instrument": "Splash", "family": "CYMBALS & METALS",
+      "phrases": ["splash cymbal", "splash"], "abbrevs": ["spl"] },
+    { "instrument": "China", "family": "CYMBALS & METALS",
+      "phrases": ["china cymbal", "china"], "abbrevs": ["chn"] },
+    { "instrument": "Cymbal", "family": "CYMBALS & METALS",
+      "phrases": ["cymbal", "cym", "sizzle", "swish", "zildjian", "sabian", "paiste"], "abbrevs": ["cy"],
+      "variations": [
+        { "name": "Gong", "phrases": ["gong", "tam tam", "tamtam"], "abbrevs": [] }
+      ] },
+
+    { "instrument": "Conga", "family": "WORLD & REGIONAL",
+      "phrases": ["conga", "tumba", "quinto"], "abbrevs": ["cng", "cg", "con"] },
+    { "instrument": "Bongo", "family": "WORLD & REGIONAL", "phrases": ["bongo"], "abbrevs": ["bng"] },
+    { "instrument": "Timbale", "family": "WORLD & REGIONAL", "phrases": ["timbale", "timbales"], "abbrevs": ["timb"] },
+    { "instrument": "Djembe", "family": "WORLD & REGIONAL", "phrases": ["djembe"], "abbrevs": ["djm", "djb"] },
+    { "instrument": "Talking Drum", "family": "WORLD & REGIONAL", "phrases": ["talking drum", "talkingdrum"], "abbrevs": [] },
+    { "instrument": "Darbuka", "family": "WORLD & REGIONAL", "phrases": ["darbuka", "doumbek", "goblet drum"], "abbrevs": [] },
+    { "instrument": "Taiko", "family": "WORLD & REGIONAL", "phrases": ["taiko"], "abbrevs": [] },
+    { "instrument": "Cajon", "family": "WORLD & REGIONAL", "phrases": ["cajon"], "abbrevs": [] },
+    { "instrument": "Surdo", "family": "WORLD & REGIONAL", "phrases": ["surdo"], "abbrevs": [] },
+    { "instrument": "Tabla", "family": "WORLD & REGIONAL", "phrases": ["tabla"], "abbrevs": [] },
+
+    { "instrument": "Marimba", "family": "ORCHESTRAL & PITCHED", "phrases": ["marimba"], "abbrevs": [] },
+    { "instrument": "Vibraphone", "family": "ORCHESTRAL & PITCHED", "phrases": ["vibraphone", "vibes"], "abbrevs": ["vib"] },
+    { "instrument": "Xylophone", "family": "ORCHESTRAL & PITCHED", "phrases": ["xylophone"], "abbrevs": ["xyl"] },
+    { "instrument": "Glockenspiel", "family": "ORCHESTRAL & PITCHED", "phrases": ["glockenspiel", "glock"], "abbrevs": [] },
+    { "instrument": "Timpani", "family": "ORCHESTRAL & PITCHED", "phrases": ["timpani", "kettledrum", "kettle drum"], "abbrevs": ["timp"] },
+    { "instrument": "Steel Pan", "family": "ORCHESTRAL & PITCHED", "phrases": ["steel pan", "steelpan", "steel drum", "steeldrum"], "abbrevs": [] },
+    { "instrument": "Kalimba", "family": "ORCHESTRAL & PITCHED", "phrases": ["kalimba", "mbira", "thumb piano"], "abbrevs": [] },
+
+    { "instrument": "Cowbell", "family": "HAND PERCUSSION", "phrases": ["cowbell", "cow bell", "agogo"], "abbrevs": ["cb", "cow", "cbell"] },
+    { "instrument": "Shaker", "family": "HAND PERCUSSION", "phrases": ["shaker", "maracas", "maraca", "cabasa", "caxixi", "egg shaker"], "abbrevs": ["shkr", "shk", "shak"] },
+    { "instrument": "Tambourine", "family": "HAND PERCUSSION", "phrases": ["tambourine"], "abbrevs": ["tamb", "tmb"] },
+    { "instrument": "Woodblock", "family": "HAND PERCUSSION", "phrases": ["woodblock", "wood block", "claves", "clave", "castanet", "block"], "abbrevs": ["wb", "clv", "clav"] },
+    { "instrument": "Guiro", "family": "HAND PERCUSSION", "phrases": ["guiro", "scraper", "cuica"], "abbrevs": ["gui"] },
+    { "instrument": "Triangle", "family": "HAND PERCUSSION", "phrases": ["triangle"], "abbrevs": [] },
+    { "instrument": "Chime", "family": "HAND PERCUSSION", "phrases": ["wind chime", "chime"], "abbrevs": [] },
+    { "instrument": "Bell", "family": "HAND PERCUSSION", "phrases": ["sleigh bell", "hand bell", "bell"], "abbrevs": [] },
+
+    { "instrument": "808", "family": "ELECTRONIC & DESIGN", "phrases": ["808"], "abbrevs": ["808"] },
+    { "instrument": "Vinyl", "family": "ELECTRONIC & DESIGN", "phrases": ["vinyl", "crackle", "atmosphere", "atmos", "record noise"], "abbrevs": ["vnl"] },
+    { "instrument": "Scratch", "family": "ELECTRONIC & DESIGN", "phrases": ["scratches", "scratch"], "abbrevs": ["scr"] },
+    { "instrument": "DJ", "family": "ELECTRONIC & DESIGN", "phrases": ["turntable", "deck", "transform scratch"], "abbrevs": ["dj"] },
+    { "instrument": "Vocal", "family": "ELECTRONIC & DESIGN", "phrases": ["vocal", "voice", "chant", "shout", "adlib", "choir", "acapella", "acappella"], "abbrevs": ["vox", "vx", "voc"] },
+    { "instrument": "FX", "family": "ELECTRONIC & DESIGN",
+      "phrases": ["sound effect", "foley", "laser", "noise", "zap", "glitch", "drone", "whoosh", "reverse", "downlifter", "sweep", "sfx", "fx"], "abbrevs": ["fx", "sfx"],
+      "variations": [
+        { "name": "Riser", "phrases": ["riser", "uplifter", "sweep up"], "abbrevs": ["ris", "swp"] },
+        { "name": "Impact", "phrases": ["impact", "boom", "hit fx"], "abbrevs": ["imp"] }
+      ] },
+
+    { "instrument": "Bass", "family": "MELODIC", "phrases": ["bass", "sub bass", "808 bass", "slap bass", "bass slap"], "abbrevs": ["sub"] },
+    { "instrument": "Perc", "family": "HAND PERCUSSION",
+      "phrases": ["percussion", "auxiliary", "perc"], "abbrevs": ["prc", "perc"],
+      "variations": [
+        { "name": "Slap", "phrases": ["slap"], "abbrevs": [] }
+      ] },
+    { "instrument": "Guitar", "family": "MELODIC", "phrases": ["guitar", "gtr", "acoustic gt", "electric gt"], "abbrevs": ["gtr", "gt"] },
+    { "instrument": "Strings", "family": "MELODIC", "phrases": ["strings", "string", "violin", "viola", "cello", "orchestra", "ensemble", "pizz", "arco"], "abbrevs": [] },
+    { "instrument": "Horn", "family": "MELODIC", "phrases": ["horn", "trumpet", "trombone", "tuba", "brass"], "abbrevs": ["hrn"] },
+    { "instrument": "Sax", "family": "MELODIC", "phrases": ["saxophone", "sax"], "abbrevs": [] },
+    { "instrument": "Keyboards", "family": "MELODIC",
+      "phrases": ["keyboard", "keys"], "abbrevs": ["kb", "keyb"],
+      "variations": [
+        { "name": "Electric Piano", "phrases": ["electric piano", "rhodes", "wurlitzer", "wurli", "e-piano", "epiano"], "abbrevs": ["ep"] },
+        { "name": "Organ", "phrases": ["organ", "hammond"], "abbrevs": ["org"] },
+        { "name": "Clav", "phrases": ["clavinet", "clav"], "abbrevs": [] },
+        { "name": "Piano", "phrases": ["grand piano", "upright piano", "piano"], "abbrevs": ["pno"] },
+        { "name": "Synth", "phrases": ["synthesizer", "synth"], "abbrevs": ["syn"] }
+      ] },
+    { "instrument": "Note", "family": "MELODIC", "phrases": ["note"], "abbrevs": [] },
+
+    { "instrument": "Perc", "family": "HAND PERCUSSION",
+      "phrases": [], "abbrevs": [],
+      "variations": [
+        { "name": "Drum", "phrases": ["drum"], "abbrevs": ["drm"] }
+      ] },
+    { "instrument": "Loops/Patterns", "family": "LOOP", "phrases": ["loop", "groove", "beat"], "abbrevs": ["lp"] }
+  ]
+}

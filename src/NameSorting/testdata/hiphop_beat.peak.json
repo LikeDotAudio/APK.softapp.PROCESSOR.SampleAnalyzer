@@ -1,0 +1,152 @@
+{
+  "metadata": {
+    "analyzer_version": "20260716.0306-a0573c3c46fbebde",
+    "name": "ifitsgood.wav",
+    "folder": "HipHop Beats/Old school",
+    "sub": "HipHop Beats/Old school",
+    "path": "HipHop Beats/Old school/ifitsgood.wav",
+    "length_seconds": 1.6282993197278912,
+    "sample_rate": 11025,
+    "bit_depth": 16,
+    "channels": 1,
+    "source_format": "WAV",
+    "lossy_source": false,
+    "dc_offset": -0.0010715916407512047,
+    "trailing_silence_ms": 0
+  },
+  "classification": {
+    "group": "Loops/Patterns",
+    "reason": [
+      "1) name \"beat\" → loop",
+      "2) envelope Multi (attack 25 ms, sustain 10%, 4 transients)",
+      "3) Stochastic · high-band 38% · root G#1"
+    ],
+    "timbre": "Loop",
+    "length_class": "Loop",
+    "subgroup": "Beat",
+    "audit": false,
+    "acoustic_types": [
+      "Stochastic"
+    ],
+    "sound_design_roles": [],
+    "instrument_family": []
+  },
+  "envelope": {
+    "transient_count": 4,
+    "attack_seconds": 0.012970521541950114,
+    "sustain_ratio": 0.1111111111111111,
+    "sustained": false,
+    "envelope_attack_seconds": 0.02494331065759637,
+    "envelope_decay_seconds": 0.22947845804988662,
+    "envelope_sustain_level": 0.09839246304406842,
+    "envelope_release_seconds": 0.06485260770975057,
+    "envelope_temporal_centroid": 0.4118984081821714,
+    "envelope_skewness": 2.3537083599302586,
+    "envelope_kurtosis": 6.080020101309739,
+    "envelope_shape": "Multi",
+    "decay_time_seconds_60db": 1.0953026182513492,
+    "onset_periodicity": 0.15988678351394778,
+    "onset_rate_per_second": 2.4565508021390374
+  },
+  "spectral_features": {
+    "root_mean_square_level": 0.16911416621266512,
+    "crest_factor": 5.757251650199626,
+    "zero_crossings_per_second": 2904.257185828877,
+    "complexity": 1686.4064421206326,
+    "spectral_centroid_hz": 1699.9390324184667,
+    "spectral_rolloff_hz": 3882.5785427807486,
+    "spectral_flatness": 0.5922008601480669,
+    "low_band_energy": 0.25737177093304986,
+    "mid_band_energy": 0.35877731986382777,
+    "high_band_energy": 0.38385090920312237,
+    "spectral_flux": 0.2519732962228138,
+    "harmonicity": 0.7532431353641467,
+    "inharmonicity": 0.6244541241886765,
+    "partial_count": 12,
+    "mel_frequency_cepstral_coefficients": [
+      32.36651698549383,
+      1.7300560911479164,
+      3.827951221366015,
+      2.1255863359245275,
+      -0.2849428030634508,
+      0.1914142784725326,
+      -0.15191696881018213,
+      0.19192813256262103,
+      -0.21182030270306282,
+      0.041965388044001815,
+      -0.49963678583550064,
+      -0.92577429490639,
+      -0.680576900138335
+    ],
+    "spectral_centroid_mean_hz": 2054.2886136186526,
+    "spectral_centroid_deviation_hz": 561.8110630069635,
+    "total_harmonic_distortion": 0,
+    "clipping_density": 0,
+    "distortion": "Clean",
+    "stationarity": 0.31150798980423766,
+    "spectral_entropy": 0.6136249960078785,
+    "spectral_slope_db_per_octave": -4.228782398232348,
+    "band_limit_high_hz": 5507.11669921875,
+    "spectral_centroid_slope_hz_per_second": -750.2946342852763,
+    "syllabic_modulation_energy": 0.2891030229412277,
+    "voicing_ratio": 0.536036036036036,
+    "mid_rms": 0.1691141658993036,
+    "side_rms": 0,
+    "lufs": -16.74619915386393
+  },
+  "musicality": {
+    "pitch_hz": 2205,
+    "pitch_slope_semitones_per_second": null,
+    "root_note_name": "G#1",
+    "root_frequency_hz": 51.02131930499195,
+    "root_cents_offset": -29.997696952781894,
+    "beats_per_minute": 72,
+    "root_midi_note": -1,
+    "chromagram": [
+      0.8687000489758968,
+      0.8843825245584561,
+      0.857371360189284,
+      0.7719436241868283,
+      0.9308717516467898,
+      0.6001077241752593,
+      0.8085607797556805,
+      0.7161734926871859,
+      1,
+      0.86330065705993,
+      0.9412134179591078,
+      0.9065083954478089
+    ]
+  },
+  "unsupervised": {
+    "cluster": -1,
+    "principal_components": []
+  },
+  "ucs": {
+    "category": "BELLS",
+    "subcategory": "MISC",
+    "id": "BELLMisc",
+    "confidence": 0.3920440886247748,
+    "alternatives": [],
+    "synonyms": [
+      "school"
+    ],
+    "reason": "name matched [school]"
+  },
+  "regions": {
+    "count": 1,
+    "detection_threshold_decibels": -40,
+    "minimum_silence_seconds": 0.15,
+    "minimum_region_seconds": 0.05,
+    "regions": [
+      {
+        "index": 0,
+        "start_seconds": 0,
+        "end_seconds": 1.6282993197278912,
+        "duration_seconds": 1.6282993197278912,
+        "peak_amplitude": 0.6953215452717351,
+        "name": "",
+        "analysis": null
+      }
+    ]
+  }
+}
