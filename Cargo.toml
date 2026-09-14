@@ -20,7 +20,7 @@ serde_json = "1"
 [dependencies]
 # The shared cutting DSP — regions.rs delegates region detection here so the stored .PEAK
 # regions and the interactive web Extractor run one implementation (no TS/Rust drift).
-extractor_engine = { path = "../SCANALIZER.Extractor-Engine" }
+extractor_engine = { path = "../CAPTURE.Extractor-Engine" }
 hound = "3.5"
 rustfft = "6.2"
 walkdir = "2.5"
