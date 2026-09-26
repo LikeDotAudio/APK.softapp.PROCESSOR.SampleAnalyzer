@@ -25,11 +25,11 @@ fn sorted_files(dir: &Path, ext: &str) -> Vec<PathBuf> {
 
 fn main() {
     println!("cargo:rerun-if-changed=src");
-    println!("cargo:rerun-if-changed=../../UCS/categories");
-    println!("cargo:rerun-if-changed=../../UCS/producer_synonyms.json");
+    println!("cargo:rerun-if-changed=../../DATATYPE/DATATYPE.soundfx.UCS/categories");
+    println!("cargo:rerun-if-changed=../../DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json");
 
-    let ucs_dir_path = if Path::new("../../UCS/categories").exists() {
-        Path::new("../../UCS/categories")
+    let ucs_dir_path = if Path::new("../../DATATYPE/DATATYPE.soundfx.UCS/categories").exists() {
+        Path::new("../../DATATYPE/DATATYPE.soundfx.UCS/categories")
     } else {
         Path::new("../UCS/categories")
     };
@@ -71,8 +71,8 @@ fn main() {
     // OBJECTS/FASHION. A music library therefore has no UCS words to match on. The overlay
     // adds those words, keyed by UCS category_id, and is merged here rather than edited
     // into UCS/categories/ so the vendored spec stays pristine and upgradeable.
-    let overlay_path = if Path::new("../../UCS/producer_synonyms.json").exists() {
-        Path::new("../../UCS/producer_synonyms.json")
+    let overlay_path = if Path::new("../../DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json").exists() {
+        Path::new("../../DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json")
     } else {
         Path::new("../UCS/producer_synonyms.json")
     };
