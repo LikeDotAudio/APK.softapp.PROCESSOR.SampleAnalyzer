@@ -107,3 +107,7 @@ cargo run --release --example ucs_scorecard -- <music-dir> <sfx-dir>
 
 ## 🛣 Plans
 Plans for this app live only in the monorepo roadmap: `Documentation/🛣Roadmap/roadmap.htm`.
+
+<!-- wiki:smoke -->
+**Smoke test** — ✅ PASS 1/1 since 2026-10-30 12:51 EDT — [results](Documentation/%F0%9F%A7%A9Manual%20and%20Artifacts/SMOKE.md)
+<!-- /wiki:smoke -->
