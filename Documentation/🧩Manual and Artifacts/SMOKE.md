@@ -12,4 +12,4 @@ Is `PROCESSOR.SampleAnalyzer` deployed? Written by `.apk.scripts/smoke.py` from 
 
 Re-run: `python3 .apk.scripts/smoke.py PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer`
 
-<!-- smoke:sig 597966922cc4 since 2026-10-30 12:51 EDT -->
+<!-- smoke:sig 98bb277fddc2 since 2026-10-30 12:51 EDT -->
