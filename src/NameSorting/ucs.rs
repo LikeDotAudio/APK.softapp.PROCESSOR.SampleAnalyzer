@@ -833,13 +833,32 @@ mod tests {
     #[test]
     fn specific_synonyms_outrank_generic_ones() {
         let idx = index();
-        // "tambourine" lives in very few subcategories; "large" is everywhere.
+        // "tambourine" lives in very few subcategories. The generic yardstick is the
+        // most widespread token in the table, found rather than named: a named word
+        // goes stale as the data moves ("large" was the yardstick until
+        // MODIFIER_STOPWORDS stopped it being borrowed, which left it in one entry
+        // and gave it a HIGHER IDF than tambourine).
         let tamb = idx.idf.get("tambourine").copied().unwrap_or(0.0);
-        let generic = idx.idf.get("large").copied().unwrap_or(0.0);
+        let (common, generic) = idx
+            .idf
+            .iter()
+            .min_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .map(|(t, v)| (t.clone(), *v))
+            .expect("the index has tokens");
         assert!(
-            tamb > generic,
-            "IDF should favour the specific token: tambourine {tamb} vs large {generic}"
+            tamb > generic + 2.0,
+            "IDF should favour the specific token: tambourine {tamb} vs {common} {generic}"
         );
+        // A generic modifier counts only where it is the subcategory's own name word,
+        // so it can never be the widespread token that drowns a specific one.
+        for e in idx.entries.iter().filter(|e| e.tokens.iter().any(|t| t == "large")) {
+            assert!(
+                e.sub.subcategory.to_lowercase().split_whitespace().any(|w| w == "large"),
+                "\"large\" was borrowed into {} {}",
+                e.category,
+                e.sub.subcategory
+            );
+        }
     }
 
     #[test]
