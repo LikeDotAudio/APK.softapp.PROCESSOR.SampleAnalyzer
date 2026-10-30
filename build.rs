@@ -5,11 +5,12 @@
 //!    which drifted. We now splice them into one array in OUT_DIR and embed
 //!    that, so the two cannot disagree.
 //!
-//! 2. Stamp the build with an analyzer version: the timestamp, to the minute.
-//!    The `rerun-if-changed` lines below scope it — this file re-runs only when
-//!    an extractor under src/ or a UCS category signature changes, so the stamp
-//!    marks when the analyzer's inputs last moved, and every existing .PEAK
-//!    sidecar carrying an older stamp is invalidated and re-analyzed.
+//! 2. Stamp the build with an analyzer version: a hash of what the analyzer
+//!    computes from — the Rust under src/ and the shared extractor engine's src/
+//!    with comments and layout stripped, plus the bundled UCS data. A comment-only
+//!    or reformatting edit leaves it unchanged; a code or data edit changes it,
+//!    and every existing .PEAK sidecar carrying another version is then
+//!    re-analyzed. When the version moves, the build says so (cargo:warning).
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -25,6 +26,7 @@ fn sorted_files(dir: &Path, ext: &str) -> Vec<PathBuf> {
 
 fn main() {
     println!("cargo:rerun-if-changed=src");
+    println!("cargo:rerun-if-changed={EXTRACTOR_SRC}");
     println!("cargo:rerun-if-changed=../../DATATYPE/DATATYPE.soundfx.UCS/categories");
     println!("cargo:rerun-if-changed=../../DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json");
 
@@ -153,14 +155,182 @@ fn main() {
     fs::write(out.join("ucs_signed.json"), &bundle).expect("write ucs_signed.json");
     fs::write(out.join("ucs_roles.json"), &role_bundle).expect("write ucs_roles.json");
 
-    // Stamp the build. The `rerun-if-changed` lines above are what make this a
-    // meaningful version: this file only re-runs when `src/` or the UCS data
-    // changes, so the timestamp marks the minute the analyzer's inputs last
-    // changed, and a record stamped with an older one needs re-analysis.
-    let date_output = std::process::Command::new("date")
-        .arg("+%Y%m%d.%H%M")
-        .output()
-        .expect("failed to execute date command");
-    let date_str = String::from_utf8_lossy(&date_output.stdout).trim().to_string();
-    println!("cargo:rustc-env=ANALYZER_DATE={}", date_str);
+    // Stamp the build: a hash of the analyzer's inputs, not a timestamp. The
+    // timestamp re-stamped on any edit under src/, so a comment fix made every
+    // library re-analyze. Comments and whitespace are stripped before hashing,
+    // so only a change to what the code or data says moves the version.
+    let mut h = Fnv::new();
+    for dir in [Path::new("src"), Path::new(EXTRACTOR_SRC)] {
+        if !dir.exists() {
+            continue;
+        }
+        let mut files = Vec::new();
+        rust_files(dir, &mut files);
+        files.sort();
+        for f in files {
+            let rel = f.strip_prefix(dir).unwrap_or(&f).to_string_lossy().replace('\\', "/");
+            let text = fs::read_to_string(&f).unwrap_or_else(|e| panic!("read {}: {e}", f.display()));
+            h.feed(rel.as_bytes());
+            h.feed(&[0]);
+            h.feed(strip_rust(&text).as_bytes());
+            h.feed(&[0]);
+        }
+    }
+    h.feed(bundle.as_bytes());
+    h.feed(&[0]);
+    h.feed(role_bundle.as_bytes());
+    let version = format!("{:012x}", h.0 & 0xffff_ffff_ffff);
+
+    // Say so when it moves: every .PEAK sidecar from the old version will be
+    // re-analyzed at the next scan, and that should never be a surprise.
+    let last = out.join("analyzer_version.txt");
+    if let Ok(prev) = fs::read_to_string(&last) {
+        let prev = prev.trim();
+        if !prev.is_empty() && prev != version {
+            println!(
+                "cargo:warning=ANALYZER_VERSION changed {prev} -> {version}: every .PEAK sidecar from {prev} will be re-analyzed at the next scan"
+            );
+        }
+    }
+    let _ = fs::write(&last, &version);
+    println!("cargo:rustc-env=ANALYZER_HASH={version}");
+}
+
+/// The shared region-cutting DSP; its code shapes stored regions, so it is an input too.
+const EXTRACTOR_SRC: &str = "../../CAPTURE/CAPTURE.Extractor-Engine/src";
+
+fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(rd) = fs::read_dir(dir) else { return };
+    for e in rd.flatten() {
+        let p = e.path();
+        if p.is_dir() {
+            rust_files(&p, out);
+        } else if p.extension().and_then(|x| x.to_str()) == Some("rs") {
+            out.push(p);
+        }
+    }
+}
+
+/// 64-bit FNV-1a: stable across machines and Rust versions (std's hasher is not).
+struct Fnv(u64);
+impl Fnv {
+    fn new() -> Self {
+        Fnv(0xcbf2_9ce4_8422_2325)
+    }
+    fn feed(&mut self, bytes: &[u8]) {
+        for b in bytes {
+            self.0 ^= *b as u64;
+            self.0 = self.0.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    }
+}
+
+/// Rust source with comments removed and every whitespace run outside literals
+/// collapsed to one space. String, raw-string, byte-string and char literals are
+/// kept verbatim (a `//` inside "http://…" is not a comment); a lifetime `'a`
+/// is told from a char literal by the closing quote.
+fn strip_rust(src: &str) -> String {
+    let c: Vec<char> = src.chars().collect();
+    let n = c.len();
+    let mut out = String::with_capacity(n);
+    let mut i = 0;
+    let mut space = false;
+    let push = |out: &mut String, space: &mut bool, ch: char| {
+        if *space && !out.is_empty() {
+            out.push(' ');
+        }
+        *space = false;
+        out.push(ch);
+    };
+    while i < n {
+        let ch = c[i];
+        if ch == '/' && i + 1 < n && c[i + 1] == '/' {
+            while i < n && c[i] != '\n' {
+                i += 1;
+            }
+            space = true;
+        } else if ch == '/' && i + 1 < n && c[i + 1] == '*' {
+            let mut depth = 1;
+            i += 2;
+            while i < n && depth > 0 {
+                if c[i] == '/' && i + 1 < n && c[i + 1] == '*' {
+                    depth += 1;
+                    i += 2;
+                } else if c[i] == '*' && i + 1 < n && c[i + 1] == '/' {
+                    depth -= 1;
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+            space = true;
+        } else if ch.is_whitespace() {
+            space = true;
+            i += 1;
+        } else if ch == 'r' && i + 1 < n && (c[i + 1] == '"' || c[i + 1] == '#')
+            && !(i > 0 && (c[i - 1].is_alphanumeric() || c[i - 1] == '_'))
+        {
+            // raw string r"…" / r#"…"#
+            let mut j = i + 1;
+            let mut hashes = 0;
+            while j < n && c[j] == '#' {
+                hashes += 1;
+                j += 1;
+            }
+            if j < n && c[j] == '"' {
+                j += 1;
+                loop {
+                    if j >= n {
+                        break;
+                    }
+                    if c[j] == '"' && (0..hashes).all(|k| j + 1 + k < n && c[j + 1 + k] == '#') {
+                        j += 1 + hashes;
+                        break;
+                    }
+                    j += 1;
+                }
+                for &x in &c[i..j.min(n)] {
+                    push(&mut out, &mut space, x);
+                }
+                i = j;
+            } else {
+                push(&mut out, &mut space, ch);
+                i += 1;
+            }
+        } else if ch == '"' {
+            let mut j = i + 1;
+            while j < n && c[j] != '"' {
+                if c[j] == '\\' {
+                    j += 1;
+                }
+                j += 1;
+            }
+            j = (j + 1).min(n);
+            for &x in &c[i..j] {
+                push(&mut out, &mut space, x);
+            }
+            i = j;
+        } else if ch == '\'' {
+            // char literal 'x' / '\n' / '\u{..}', else a lifetime or label
+            let j = if i + 1 < n && c[i + 1] == '\\' {
+                let mut j = i + 2;
+                while j < n && c[j] != '\'' {
+                    j += 1;
+                }
+                (j + 1).min(n)
+            } else if i + 2 < n && c[i + 2] == '\'' {
+                i + 3
+            } else {
+                i + 1
+            };
+            for &x in &c[i..j] {
+                push(&mut out, &mut space, x);
+            }
+            i = j;
+        } else {
+            push(&mut out, &mut space, ch);
+            i += 1;
+        }
+    }
+    out
 }

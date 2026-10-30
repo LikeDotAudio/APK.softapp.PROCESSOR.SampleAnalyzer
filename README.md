@@ -26,9 +26,9 @@ The crate does not build on its own — it needs two sibling repos in the monore
 * `../../CAPTURE/CAPTURE.Extractor-Engine` — the shared region-cutting DSP (`extractor_engine` crate). `regions.rs` delegates to it so stored `.PEAK` regions and the web Extractor run one implementation.
 * `../../DATATYPE/DATATYPE.soundfx.UCS/categories/*.json` and `producer_synonyms.json` — the UCS category signatures and the producer-vocabulary overlay. `build.rs` splices them (minified) into `ucs_signed.json` and `ucs_roles.json` in `OUT_DIR`, embedded with `include_str!`. Files with `"matchable": false` (MUSICPROD) go to the roles bundle, not the matcher. An overlay id that matches no UCS `category_id` fails the build.
 
-`build.rs` also stamps `ANALYZER_DATE` (`date +%Y%m%d.%H%M`). It re-runs only when `src/` or the UCS data change, so the stamp — `ANALYZER_VERSION` in `src/Core/version.rs` — marks the minute the analyzer's inputs last changed.
+`build.rs` also stamps `ANALYZER_HASH` — `ANALYZER_VERSION` in `src/Core/version.rs` — a 12-hex-digit FNV-1a hash of `src/**/*.rs` and `../../CAPTURE/CAPTURE.Extractor-Engine/src/**/*.rs` with comments and whitespace stripped, plus the bundled UCS data. A comment or formatting edit keeps the version; the same source gives the same version on any machine.
 
-> ⚠️ Any edit under `src/`, comments included, produces a new analyzer version, and every existing `.PEAK` sidecar is then re-analyzed on the next scan.
+> ⚠️ A code or UCS data change produces a new analyzer version, and every existing `.PEAK` sidecar is then re-analyzed on the next scan. The build prints `warning: … ANALYZER_VERSION changed <old> -> <new>` when that happens, and a scan that re-analyzes such sidecars prints `Note: N .PEAK sidecar(s) were written by analyzer <old>…` and emits a `{"type":"stale"}` event (`stale` is also counted in `done`).
 
 ### Source layout
 `src/lib.rs` maps each module to its folder with `#[path]`:
@@ -95,7 +95,7 @@ cargo run --release --example ucs_scorecard -- <music-dir> <sfx-dir>
 ## 🏛 Philosophy
 
 * **The sidecar is the record; everything else is a cache.** Each `.PEAK` sits beside its audio and is canonical; the slim manifest is "a rebuildable cache … nothing's correctness ever depends on it" (`src/Encoders/manifest.rs`). Sidecars are written as each file finishes so an interrupted scan keeps its work (`src/Pipeline/run.rs`).
-* **Re-analyze only when the analyzer changed.** A sidecar is reused when its `analyzer_version` equals this build's and it names the same file (`src/Encoders/sidecar.rs`); the version is the build stamp, scoped by `rerun-if-changed` (`build.rs`, `src/Core/version.rs`).
+* **Re-analyze only when the analyzer changed.** A sidecar is reused when its `analyzer_version` equals this build's and it names the same file (`src/Encoders/sidecar.rs`); the version is a hash of the analyzer's code and data, comments excluded (`build.rs`, `src/Core/version.rs`).
 * **One bad file never stops a scan.** Each file's analysis runs under `catch_unwind`, a panic becomes a `skip` line, and the panic hook is silenced (`src/main.rs`, `src/Pipeline/run.rs`). The manifest and DB upload are best-effort and never fail the scan.
 * **Report what was ignored, never drop silently.** The walk counts every non-audio extension it skipped and reports it in the `start` line (`src/Pipeline/discover.rs`); the DB step reports what the server *stored*, not what was sent (`src/Pipeline/run.rs`, `db_export`).
 * **Refusal over fabrication.** A weak or too-close UCS win falls back to the winning category's MISC (abstention) rather than commit to a guess, and the scorecard counts abstentions separately from hits (`src/NameSorting/ucs.rs`, `examples/ucs_scorecard.rs`); provenance is never auto-asserted (`ucs::tests::provenance_is_never_auto_asserted`).

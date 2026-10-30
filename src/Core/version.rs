@@ -1,5 +1,5 @@
-//! The analyzer version written into every record: the build timestamp to the
-//! minute, stamped by build.rs at compile time.
+//! The analyzer version written into every record: a 12-hex-digit hash of the
+//! analyzer's inputs, stamped by build.rs at compile time.
 //!
 //! It answers exactly one question — "was this record produced by the current
 //! analyzer, or does it need re-analysis?" — and every consumer compares it for
@@ -7,10 +7,9 @@
 //! is: this string is stored once per record in every `.PEAK` sidecar and once
 //! per row in the cloud database.
 //!
-//! build.rs re-runs only when `src/` or the UCS data changes, so the stamp is
-//! the minute the analyzer's inputs last changed — not the minute of every
-//! incremental build. A source hash used to be appended to make the version
-//! reproducible across machines, but the timestamp in front of it already made
-//! the whole string differ between two builds of identical source, so the hash
-//! never delivered that property and was 17 bytes per record of nothing.
-pub const ANALYZER_VERSION: &str = env!("ANALYZER_DATE");
+//! The hash covers the Rust under `src/` and the extractor engine's `src/` with
+//! comments and whitespace stripped, plus the bundled UCS data. A comment or
+//! formatting edit therefore keeps it; a code or data change moves it, and the
+//! build prints a `cargo:warning` naming the old and new version. Two builds of
+//! the same source give the same version on any machine.
+pub const ANALYZER_VERSION: &str = env!("ANALYZER_HASH");

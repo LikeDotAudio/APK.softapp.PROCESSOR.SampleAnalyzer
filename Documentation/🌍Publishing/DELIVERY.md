@@ -30,5 +30,6 @@ repo's `.rs` files are in that image as files nginx refuses to serve; the root
 
 - **Tests.** No CI runs `cargo test`; the monorepo CI runs no tests (its header says so).
 - **The CLI and the desktop app** are built and installed by hand.
-- **A version bump re-analyzes every library.** Any edit under `src/` changes
-  `ANALYZER_VERSION` at the next build; that is by design, but nothing warns when it happens.
+- **A version bump re-analyzes every library.** A code or UCS data change (not a comment or
+  formatting edit) changes `ANALYZER_VERSION`; the build warns, and the scan reports how many
+  sidecars it re-analyzed and from which version.

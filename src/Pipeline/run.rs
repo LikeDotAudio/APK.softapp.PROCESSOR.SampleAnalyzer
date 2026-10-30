@@ -15,7 +15,7 @@ use crate::discover::discover_audio;
 use crate::emit::emit;
 use crate::pca::pca_assign;
 use crate::peak::Peak;
-use crate::sidecar::{read_sidecar, write_sidecar};
+use crate::sidecar::{read_sidecar, write_sidecar, Miss};
 use crate::stream::{emit_result, emit_skip};
 use crate::version::ANALYZER_VERSION;
 
@@ -53,6 +53,10 @@ pub fn run(cfg: &Config) {
     let wrote = AtomicUsize::new(0);
     let failed = AtomicUsize::new(0);
     let reused = AtomicUsize::new(0);
+    // Sidecars rejected only because another analyzer version wrote them, and
+    // which versions those were — reported at the end, never silent.
+    let stale = AtomicUsize::new(0);
+    let stale_from = Mutex::new(std::collections::BTreeSet::<String>::new());
     let stdout_lock = Mutex::new(());
     let pool = rayon::ThreadPoolBuilder::new().num_threads(cfg.workers.max(1)).build().unwrap();
 
@@ -83,7 +87,19 @@ pub fn run(cfg: &Config) {
                     }));
                 }
                 
-                let cached = if cfg.force { None } else { read_sidecar(f, &cfg.root) };
+                let cached = if cfg.force {
+                    None
+                } else {
+                    match read_sidecar(f, &cfg.root) {
+                        Ok(p) => Some(p),
+                        Err(Miss::Stale(old)) => {
+                            stale.fetch_add(1, Ordering::Relaxed);
+                            stale_from.lock().unwrap().insert(old);
+                            None
+                        }
+                        Err(Miss::Absent) => None,
+                    }
+                };
                 let was_cached = cached.is_some();
                 // Catch any per-file panic so one bad sample can't abort the run.
                 let res = cached.or_else(|| {
@@ -117,6 +133,18 @@ pub fn run(cfg: &Config) {
             })
             .collect()
     });
+
+    let stale_n = stale.load(Ordering::Relaxed);
+    let stale_from: Vec<String> = stale_from.into_inner().unwrap().into_iter().collect();
+    if stale_n > 0 {
+        eprintln!(
+            "Note: {stale_n} .PEAK sidecar(s) were written by analyzer {} and were re-analyzed with {}",
+            stale_from.join(", "),
+            ANALYZER_VERSION
+        );
+        emit(&serde_json::json!({ "type": "stale", "count": stale_n, "from": stale_from,
+                                  "analyzer_version": ANALYZER_VERSION }));
+    }
 
     // ---- Blind K-Means grouping over the extracted feature space.
     cluster_samples(&mut results, cfg.clusters);
@@ -185,5 +213,6 @@ pub fn run(cfg: &Config) {
     }
     emit(&serde_json::json!({ "type": "done", "count": results.len(), "out": cfg.out.to_string_lossy(),
                               "per_file": cfg.per_file, "reused": reused.load(Ordering::Relaxed),
+                              "stale": stale_n,
                               "analyzer_version": ANALYZER_VERSION }));
 }

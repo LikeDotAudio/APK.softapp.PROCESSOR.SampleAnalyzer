@@ -14,21 +14,32 @@ pub fn write_sidecar(p: &Peak) -> bool {
         .is_some()
 }
 
+/// Why a sidecar was not reused.
+#[derive(Debug, PartialEq)]
+pub enum Miss {
+    /// No sidecar, unreadable, or it describes some other file.
+    Absent,
+    /// A valid sidecar written by another analyzer version (named here). The run
+    /// counts these and says so, so a library-wide re-analysis is never silent.
+    Stale(String),
+}
+
 /// Try to reuse the existing sidecar instead of re-analyzing: valid only when
 /// it parses as a full record AND its `analyzer` version matches this binary
-/// (same crate version + same source hash ⇒ identical results by definition)
+/// (same analyzer inputs ⇒ identical results by definition)
 /// AND it describes this same file name. Returns the record with its
 /// path/folder refreshed to the file's current location, cluster reset.
-pub fn read_sidecar(wav: &Path, root: &Path) -> Option<Peak> {
+pub fn read_sidecar(wav: &Path, root: &Path) -> Result<Peak, Miss> {
     let peak_path = wav.with_extension("PEAK");
-    let txt = std::fs::read_to_string(&peak_path).ok()?;
-    let mut p: Peak = serde_json::from_str(&txt).ok()?;
-    if p.metadata.analyzer_version != ANALYZER_VERSION {
-        return None; // produced by different extractor code — re-analyze
-    }
+    let txt = std::fs::read_to_string(&peak_path).map_err(|_| Miss::Absent)?;
+    let mut p: Peak = serde_json::from_str(&txt).map_err(|_| Miss::Absent)?;
     let name = wav.file_name().and_then(|x| x.to_str()).unwrap_or("");
     if p.metadata.name != name || name.is_empty() {
-        return None; // sidecar describes some other file — re-analyze
+        return Err(Miss::Absent); // sidecar describes some other file — re-analyze
+    }
+    if p.metadata.analyzer_version != ANALYZER_VERSION {
+        // produced by different analyzer code — re-analyze
+        return Err(Miss::Stale(std::mem::take(&mut p.metadata.analyzer_version)));
     }
     // Refresh location fields (the file may have been moved with its sidecar).
     p.metadata.path = wav.to_string_lossy().to_string();
@@ -40,5 +51,5 @@ pub fn read_sidecar(wav: &Path, root: &Path) -> Option<Peak> {
     p.metadata.folder = folder.clone();
     p.metadata.sub = folder;
     p.unsupervised.cluster = -1; // clustering is global and re-run every time
-    Some(p)
+    Ok(p)
 }

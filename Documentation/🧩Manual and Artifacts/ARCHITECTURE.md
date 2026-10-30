@@ -22,8 +22,10 @@ is how the pieces connect.
    miss fails the build), minifies, and writes `ucs_signed.json` (matchable) and
    `ucs_roles.json` (`"matchable": false`, e.g. MUSICPROD) to `OUT_DIR`. `ucs.rs` embeds them
    with `include_str!`.
-2. Stamps `ANALYZER_DATE` (`date +%Y%m%d.%H%M`), which becomes `ANALYZER_VERSION`.
-   `rerun-if-changed` covers `src/` and the UCS data.
+2. Stamps `ANALYZER_HASH`, which becomes `ANALYZER_VERSION`: FNV-1a over `src/` and the
+   extractor engine's `src/` (comments and whitespace stripped) plus the UCS bundles, 12 hex
+   digits. When it differs from the last build's (`OUT_DIR/analyzer_version.txt`) the build
+   prints a `cargo:warning`. `rerun-if-changed` covers both `src/` trees and the UCS data.
 
 `Cargo.toml` also path-depends on `../../CAPTURE/CAPTURE.Extractor-Engine`.
 
