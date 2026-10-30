@@ -66,7 +66,7 @@ fn main() {
         value.get("matchable").and_then(|m| m.as_bool()).unwrap_or(true)
     };
 
-    // The producer-vocabulary overlay. UCS is a sound-effects standard: none of its 756
+    // The producer-vocabulary overlay. UCS 8.2.1 is a sound-effects standard: none of its
     // subcategories contains "hihat", "cymbal", "808" or "oneshot", and "hat" belongs to
     // OBJECTS/FASHION. A music library therefore has no UCS words to match on. The overlay
     // adds those words, keyed by UCS category_id, and is merged here rather than edited

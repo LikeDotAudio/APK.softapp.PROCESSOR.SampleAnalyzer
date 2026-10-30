@@ -31,7 +31,7 @@ pub fn normalize_name(name: &str) -> String {
 /// "KickDrum" → "kick drum", "BDKick" → "bd kick".
 ///
 /// The UCS matcher compares WHOLE TOKENS against a synonym table, so a welded
-/// "kickdrum" matches nothing in any of the 756 subcategories — every CamelCase drum
+/// "kickdrum" matches nothing in any UCS subcategory — every CamelCase drum
 /// sample was invisible to the classifier while being obvious to `categorize()`, which
 /// only needs the substring. Splitting is right for the matcher and wrong for the rule
 /// table (it would turn "BassD" into "bass d" and call a bass drum a bass guitar), so

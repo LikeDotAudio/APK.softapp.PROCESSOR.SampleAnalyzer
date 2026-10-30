@@ -85,7 +85,7 @@ pub struct Entry {
 
 pub struct Index {
     pub entries: Vec<Entry>,
-    /// token -> inverse document frequency over the 756 subcategories
+    /// token -> inverse document frequency over every bundled subcategory (828 today)
     idf: HashMap<String, f64>,
 }
 
@@ -451,7 +451,7 @@ fn signal_likelihood(sig: &Signature, p: &Peak, lossy: bool) -> f64 {
 }
 
 const KAPPA: f64 = 2.0;
-/// A single maximally-specific synonym hit has idf ≈ ln(756) ≈ 6.6; dividing by
+/// A single maximally-specific synonym hit has idf ≈ ln(828) ≈ 6.7; dividing by
 /// this makes one such hit worth roughly one unit of evidence.
 const IDF_UNIT: f64 = 6.0;
 /// The folder is weaker evidence than the file's own name, but it is real: a
@@ -684,7 +684,7 @@ pub fn classify(p: &Peak) -> Verdict {
     // sane threshold, so everything abstained to MISC.
     //
     // UCS is a predominantly semantic taxonomy (the spec puts roughly half the
-    // 753 at `semantic_only`), so a subcategory that the file name does not
+    // subcategories at `semantic_only`), so a subcategory that the file name does not
     // mention is not a serious candidate — UNLESS nothing is named at all, in
     // which case we keep the field open and let the signal decide alone.
     let named = cands.iter().any(|c| !c.hits.is_empty());
@@ -817,7 +817,7 @@ mod tests {
     fn bundle_loads_every_signed_subcategory() {
         let idx = index();
         assert!(
-            idx.entries.len() >= 753,
+            idx.entries.len() >= 828,
             "expected the full UCS table, got {}",
             idx.entries.len()
         );
