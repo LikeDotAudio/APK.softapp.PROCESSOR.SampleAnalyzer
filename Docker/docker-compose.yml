@@ -1,0 +1,73 @@
+# Worker-SAMPLE_ANALYZER — the Scanalyzer DSP core, answering jobs on the bus (LOOSE-workers-convert-rest).
+#     docker compose -f 'PODS/POD.workers/Docker/docker-compose.yml' up -d --build
+# Mountable on its own as well; it then lands in the same `workers` project:
+#     docker compose -f 'PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/Docker/docker-compose.yml' up -d --build
+#
+# A job: publish JSON to APK.audio/System/Protocols/sample_analyzer/outgoing/job
+#     {"job_id": "<yours>", "filename": "kick.wav", "content_b64": "<the audio bytes>"}
+#     (optional "folder", and "max_len" in seconds to lower the full-analysis cap)
+# The answer, with the same job_id, on .../sample_analyzer/incoming/result.
+# Its self-description, retained, on .../sample_analyzer/incoming/api.
+#
+# NO PORT. The bus is the only door, which is the point of a worker.
+
+# ONE PROJECT FOR THE POD — every worker stack declares it, so a stack brought
+# up alone joins the pod rather than opening a project beside it (the promise
+# POD.protocols' children make).
+name: workers
+
+services:
+  sample-analyzer:
+    build:
+      # The repo root, counted from THIS file's real path (PODS/README.md
+      # rule 2): Docker → PROCESSOR.SampleAnalyzer → PROCESSOR → Softapps →
+      # POD.THIN → PODS → root.
+      context: "../../../../../.."
+      dockerfile: "PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/Docker/Dockerfile"
+    image: worker-sample-analyzer:local
+    container_name: Worker-SAMPLE_ANALYZER
+    restart: unless-stopped
+    labels:
+      audio.apk.purpose: "worker: analyses an audio file into a .PEAK record, posted as a job on sample_analyzer/outgoing/job"
+    # Nothing to ask for: no port, no device, no raw socket. The image runs as
+    # an unprivileged user with no file capabilities, so no-new-privileges
+    # costs nothing here (unlike the plugins, see plugin-base.yml).
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    # The runner's health file and each job's staged audio (removed when the
+    # job is answered): the only writable path of a read-only root, sized for
+    # one job at max_job_bytes (32 MiB) with room to spare.
+    tmpfs:
+      - /tmp:size=96m
+    environment:
+      # THE BROKER BY NAME on Broker-Mosquitto's network, as plugin-bridge in
+      # DISCOVERY.Engine/Docker/plugin-base.yml does (PLAN-3378.01): the host
+      # port is loopback-only, and `broker` is the alias it answers to there.
+      MQTT_HOST: ${APK_WORKER_MQTT_HOST:-broker}
+      MQTT_PORT: ${APK_WORKER_MQTT_PORT:-1883}
+      APK_MQTT_USERNAME: ${APK_MQTT_USERNAME:-}
+      APK_MQTT_PASSWORD: ${APK_MQTT_PASSWORD:-}
+      APK_NODE: ${APK_NODE:-}
+      APK_IMAGE_REV: ${APK_IMAGE_REV:-unstamped}
+    networks: [default, bus]
+    healthcheck:
+      # The runner's probe: the timestamp its tick writes into /tmp. The job
+      # loop ticks on every broker event, keep-alive pings included.
+      test: ["CMD", "apk-plugin-health"]
+      interval: 60s
+      start_interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+# Every worker stack repeats this block verbatim; `include:` merges top-level
+# sections and an identical declaration is what makes that merge a no-op.
+networks:
+  default:
+    name: workers
+  # Broker-Mosquitto's network (project apk-audio). The broker is protected and
+  # brought up first (DockTor ensure_broker), so this exists before any worker.
+  bus:
+    external: true
+    name: apk-audio_default

@@ -1,0 +1,50 @@
+# apk-worker-sample-analyzer — the Scanalyzer DSP core as a worker on the bus
+# (LOOSE-workers-convert-rest, after PLAN-3423.01's wireless CSV worker).
+#
+# Owns: the container entry point that answers `outgoing/job` with
+# `incoming/result` by running `oa_sample_analyzer::analyze::analyze` — the
+# crate one directory up, linked by path, so the CLI, the Tauri app, the WASM
+# engine and this worker run one implementation.
+#
+# BUILT ON apk-plugin-runner, the crate every THICK plugin links: it publishes
+# the config, the last will, the self-test door and the retained `incoming/api`
+# description; this crate adds only the job loop.
+#
+# ITS OWN WORKSPACE: a worker builds its own image, so a broken worker never
+# fails the plugin build and the reverse.
+#
+# CONTRACTS BY THE SAME LEXICAL PATH THE RUNNER USES
+# (`…/NODE.BareMetal/SRC/contracts/rust`), or cargo sees two
+# apkaudio-contracts packages and refuses the build.
+[package]
+name = "apk-worker-sample-analyzer"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+
+[lib]
+name = "apk_worker_sample_analyzer"
+path = "src/lib.rs"
+
+[dependencies]
+apk-plugin-runner = { path = "../../../../../POD.THICK/DISCOVERY.Engine/SRC/RUNNER" }
+apkaudio-contracts = { path = "../../../../../POD.THICK/NODE.BareMetal/SRC/contracts/rust" }
+oa-sample-analyzer = { path = ".." }
+base64 = "0.22"
+rumqttc = "0.24"
+serde_json = "1"
+
+[[bin]]
+name = "apk-worker-sample-analyzer"
+path = "src/bin/apk-worker-sample-analyzer.rs"
+
+# The runner's health probe, compiled from the runner's own source file.
+[[bin]]
+name = "apk-plugin-health"
+path = "../../../../../POD.THICK/DISCOVERY.Engine/SRC/RUNNER/src/bin/apk-plugin-health.rs"
+
+# The analyzer is DSP: unoptimised it is an order of magnitude slower, and the
+# worker is only ever run from a release build.
+[profile.release]
+opt-level = 3

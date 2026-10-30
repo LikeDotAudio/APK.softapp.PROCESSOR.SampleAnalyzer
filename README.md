@@ -12,13 +12,14 @@
 ---
 
 ## ⚙️ Repository Overview
-A standalone Git repository, mounted as a submodule at `PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer` in the APK.audio monorepo. It is one crate, `oa-sample-analyzer`, used three ways:
+A standalone Git repository, mounted as a submodule at `PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer` in the APK.audio monorepo. It is one crate, `oa-sample-analyzer`, used four ways:
 
 | Consumer | How |
 |---|---|
 | The `oa_sample_analyzer` CLI (`src/main.rs`) | Batch scan of a directory |
 | Scanalyzer desktop app (`SCANALYZER_SUITE/SCANALYZER.Like.audio/Web_Front/src-tauri`) | Path dependency; calls `analyze::analyze_buffer`, `decode::read_audio`, `db::write_peaks` in-process |
 | Scanalyzer WASM engine (`SCANALYZER_SUITE/SCANALYZER.Like.audio/Web_Front/wasm_analyzer`) | Path dependency; the same analysis compiled for the browser (`db` is excluded on `wasm32`) |
+| The worker `Worker-SAMPLE_ANALYZER` (`SRC/`, `Docker/`; pod `PODS/POD.workers`) | Path dependency; calls `analyze::analyze` on one file posted as a job on the bus and answers with its `.PEAK` record |
 
 ### Build-time inputs (`build.rs`)
 The crate does not build on its own — it needs two sibling repos in the monorepo:
@@ -48,6 +49,26 @@ The crate does not build on its own — it needs two sibling repos in the monore
 | `src/Encoders/` | `emit` / `stream` (stdout JSON lines), `sidecar`, `manifest`, `db` (HTTP upload) |
 
 ---
+
+### As a worker (`Worker-SAMPLE_ANALYZER`, POD.workers)
+
+The analyzer answers jobs on the bus (LOOSE-workers-convert-rest). A client subscribes to
+`APK.audio/System/Protocols/sample_analyzer/incoming/result`, then publishes
+`{"job_id": "<yours>", "filename": "kick.wav", "content_b64": "<the file's bytes>"}` (optional
+`folder`, and `max_len` in seconds to lower the full-analysis cap) to
+`APK.audio/System/Protocols/sample_analyzer/outgoing/job`. The answer carries the same `job_id`,
+`ok`, and the file's `.PEAK` record under `result` — the record a batch scan writes beside the
+file, with `metadata.path` = `folder/filename`. The file is staged in the container's `/tmp`
+tmpfs for the one job (the decoder is chosen by extension, and the ACID chunk is read from the
+file) and removed before the answer goes out. Limits are in `SRC/config.ini`: 32 MiB of audio,
+600 s before a record is `preview_only`. Nothing is retained; the worker opens no port and does
+not upload (`--db-url` is the CLI's). Measured 2026-10-30: a 1 s 441 Hz WAV and the same file as
+FLAC both came back `ok: true`, `analysis_depth: full`, `pitch_hz: 441`.
+
+```bash
+docker compose -f PODS/POD.workers/Docker/docker-compose.yml up -d --build sample-analyzer
+cargo test --manifest-path SRC/Cargo.toml        # handle_job on an in-memory 440 Hz WAV, the self test
+```
 
 ## 🚀 Usage & Integration
 * **Web Portal Entry**: none of its own — `display.json` registers it as a `rust` execution engine (`autostart: false`); it is reached through the Scanalyzer app (`SCANALYZER_SUITE/SCANALYZER.Like.audio`)

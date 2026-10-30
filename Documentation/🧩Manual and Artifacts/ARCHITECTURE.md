@@ -15,6 +15,18 @@ is how the pieces connect.
 | Scanalyzer browser (`…/Web_Front/wasm_analyzer`) | `wasm-pack` build of this crate; uses `analyze_buffer`, `read_audio_buffer`, `version::ANALYZER_VERSION`. `db` and `ureq` are left out on `wasm32`. |
 | `examples/ucs_rescore.rs`, `examples/ucs_scorecard.rs` | Offline UCS re-scoring from existing sidecars. |
 
+## As a worker — `SRC/`
+
+`SRC/src/lib.rs` `handle_job` decodes a job's `content_b64`, refuses one over `max_job_bytes`
+(32 MiB), writes the bytes under a name reduced to one safe path element into a directory of the
+job's own in the temp dir, runs `analyze::analyze` on it, rewrites `metadata.folder`/`path` to
+the job's names, and removes the directory. It always returns
+`{job_id, tool, ok, result, error, elapsed_ms}`. `run_job_agent` feeds it from
+`APK.audio/System/Protocols/sample_analyzer/outgoing/job` and answers on `…/incoming/result`,
+neither retained. `apk-plugin-runner` adds the retained `incoming/api` description, the config,
+the will and the self test (`SRC/src/self_test.rs`: an in-memory 440 Hz WAV must come back fully
+analysed within 5 Hz). The pod is `PODS/POD.workers`.
+
 ## Build-time inputs — `build.rs`
 
 1. Reads `../../DATATYPE/DATATYPE.soundfx.UCS/categories/*.json` (minus `index.json`) and

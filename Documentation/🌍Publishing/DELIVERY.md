@@ -21,8 +21,9 @@ root `target/`, not the crate's (`cargo metadata` says where).
 | WASM, inside the Scanalyzer web app | The APK.audio monorepo `.github/workflows/ci.yml` step "Build the Scanalyzer" (`wasm-pack build wasm_analyzer --target web --release`, then `vite build`) on every push | https://apk.audio/APK:Softapps/SCANALYZER_SUITE/SCANALYZER.Like.audio/Web_Front/dist/ (FTPS, `WEB.Frontend-Assets/.apk.scripts/deploy.py`); Scanalyzer's own public home is https://scanalyzer.like.audio |
 | Native, inside the Scanalyzer desktop app | `npm run tauri build` in Scanalyzer's `Web_Front` (path dependency) | The operator's machine |
 | The `oa_sample_analyzer` CLI | `cargo build --release` by hand, or Scanalyzer's `main.py` | The operator's machine; the desktop app finds it by `SCAN_ANALYZER_BIN` |
+| The worker `apk-worker-sample-analyzer` (`SRC/`) | `Docker/Dockerfile`, context the repo root (it copies contracts, the runner, CAPTURE.Extractor-Engine and the UCS categories beside this crate); `cargo build --release --locked` | the **Worker-SAMPLE_ANALYZER** container (`worker-sample-analyzer:local`, project `workers`, no port); after an edit, `docker compose -f PODS/POD.workers/Docker/docker-compose.yml up -d --build sample-analyzer` |
 
-No image builds or runs it. The web-static image copies the Softapps tree (sources), so this
+One image runs it: the worker above. The web-static image copies the Softapps tree (sources), so this
 repo's `.rs` files are in that image as files nginx refuses to serve; the root
 `.dockerignore` keeps `target/` out.
 
