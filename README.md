@@ -105,6 +105,10 @@ cargo run --release --example ucs_scorecard -- <music-dir> <sfx-dir>
 
 ---
 
+The wiki — [start here](Documentation/README.md): [PRINCIPLES](Documentation/%F0%9F%8F%9BPhilosophy/PRINCIPLES.md), [ARCHITECTURE](Documentation/%F0%9F%A7%A9Manual%20and%20Artifacts/ARCHITECTURE.md), [DELIVERY](Documentation/%F0%9F%8C%8DPublishing/DELIVERY.md).
+
+---
+
 ## 🛣 Plans
 Plans for this app live only in the monorepo roadmap: `Documentation/🛣Roadmap/roadmap.htm`.
 
