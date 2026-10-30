@@ -5,7 +5,7 @@ fn main() {
     match oa_sample_analyzer::args::Config::parse(std::env::args().collect()) {
         Some(cfg) => oa_sample_analyzer::run::run(&cfg),
         None => {
-            eprintln!("usage: oa_sample_analyzer <dir> [--out <path>] [--workers <n>] [--max-len <s>] [--clusters <k>] [--no-per-file] [--force]");
+            eprintln!("usage: oa_sample_analyzer <dir> [--out <path>] [--workers <n>] [--max-len <s>] [--clusters <k>] [--no-per-file] [--force] [--stride <n>] [--db-url <url>]");
             std::process::exit(2);
         }
     }

@@ -22,11 +22,11 @@ use crate::version::ANALYZER_VERSION;
 pub fn run(cfg: &Config) {
     #[cfg(not(target_arch = "wasm32"))]
     let db_pool = cfg.db_url.as_ref().and_then(|url| {
-        db::get_pool(url).map_err(|e| eprintln!("DB Connect Error: {}", e)).ok().and_then(|pool| {
+        db::get_pool(url).map_err(|e| eprintln!("DB upload off: {}", e)).ok().and_then(|pool| {
             if db::init_db(&pool).is_ok() {
                 Some(pool)
             } else {
-                eprintln!("Warning: Failed to initialize MySQL DB. DB export will be skipped.");
+                eprintln!("Warning: DB upload could not start; DB export will be skipped.");
                 None
             }
         })

@@ -2,7 +2,7 @@
 //! sample bins, base64-encoded into the `.PEAK`'s `preview` section. Computed for every
 //! file in the same pass as the analysis, so the UI can paint a waveform without decoding
 //! any audio. Shape follows the industry standard (BWF `levl`, BBC audiowaveform):
-//! see Documentation/Audit/binary_peak_preview_audit.md.
+//! see SCANALYZER_SUITE/SCANALYZER.Like.audio/Documentation/Action Artifact/binary_peak_preview_audit.md.
 
 use crate::peak::Preview;
 

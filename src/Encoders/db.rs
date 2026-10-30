@@ -2,7 +2,10 @@
 //!
 //! Not a database client despite the name — `Pool` is a vestige of the direct
 //! MySQL connection this replaced, kept so the Tauri command's call sites did
-//! not have to change. Everything here POSTs JSON to `upload_peak.php`.
+//! not have to change. Everything here POSTs JSON to `upload_peak.php`, at the
+//! endpoint `--db-url` names (see `endpoint`): the public host, the bench's own
+//! scan-api, or a test server. It used to ignore the value and always post to
+//! the public host.
 //!
 //! Records are trimmed to the columns the endpoint stores before being sent.
 //! They used to go up whole, which was two bugs at once: a 500-record chunk of
@@ -14,15 +17,38 @@ use serde::Serialize;
 
 use crate::peak::Peak;
 
-const UPLOAD_URL: &str = "https://scanalyzer.like.audio/api/upload_peak.php";
+/// The endpoint's file name, appended when `--db-url` names a site rather than
+/// the script — the same `<base>/api/upload_peak.php` the web front end posts to.
+const UPLOAD_SCRIPT: &str = "api/upload_peak.php";
 
 /// Records per POST. Small enough that a trimmed batch stays a few hundred KB.
 const CHUNK: usize = 250;
 
-pub struct Pool;
+pub struct Pool {
+    url: String,
+}
 
-pub fn get_pool(_db_url: &str) -> Result<Pool, String> {
-    Ok(Pool)
+/// Where `--db-url` sends the records. A URL ending in `.php` is the endpoint
+/// itself; any other http(s) URL is a site base and gets `api/upload_peak.php`
+/// appended. Anything else (an old `mysql://` string) is refused, not quietly
+/// redirected to some other host.
+pub fn endpoint(db_url: &str) -> Result<String, String> {
+    let u = db_url.trim();
+    if !(u.starts_with("http://") || u.starts_with("https://")) {
+        return Err(format!(
+            "--db-url must be an http(s) URL of upload_peak.php or of the site serving it, got `{u}`"
+        ));
+    }
+    let path = u.split(['?', '#']).next().unwrap_or(u);
+    if path.ends_with(".php") {
+        Ok(u.to_string())
+    } else {
+        Ok(format!("{}/{UPLOAD_SCRIPT}", u.trim_end_matches('/')))
+    }
+}
+
+pub fn get_pool(db_url: &str) -> Result<Pool, String> {
+    Ok(Pool { url: endpoint(db_url)? })
 }
 
 pub fn init_db(_pool: &Pool) -> Result<(), String> {
@@ -197,7 +223,7 @@ fn slim(p: &Peak) -> Upload<'_> {
 /// stored — which is not the same as how many were sent, and the difference is
 /// the whole point: the old version returned `Ok(())` on any 200 and the caller
 /// reported the full input length as a success.
-pub fn write_peaks(_pool: &Pool, peaks: &[Peak]) -> Result<usize, String> {
+pub fn write_peaks(pool: &Pool, peaks: &[Peak]) -> Result<usize, String> {
     if peaks.is_empty() {
         return Ok(0);
     }
@@ -205,7 +231,7 @@ pub fn write_peaks(_pool: &Pool, peaks: &[Peak]) -> Result<usize, String> {
     let mut stored = 0usize;
     for chunk in peaks.chunks(CHUNK) {
         let body: Vec<Upload> = chunk.iter().map(slim).collect();
-        let resp = ureq::post(UPLOAD_URL)
+        let resp = ureq::post(&pool.url)
             .set("Content-Type", "application/json")
             .send_json(&body)
             .map_err(|e| match e {
@@ -230,4 +256,24 @@ pub fn write_peaks(_pool: &Pool, peaks: &[Peak]) -> Result<usize, String> {
     }
 
     Ok(stored)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::endpoint;
+
+    #[test]
+    fn db_url_names_the_endpoint() {
+        let full = "https://scanalyzer.like.audio/api/upload_peak.php";
+        assert_eq!(endpoint(full).unwrap(), full);
+        assert_eq!(
+            endpoint("http://localhost:8080/scan-api/upload_peak.php").unwrap(),
+            "http://localhost:8080/scan-api/upload_peak.php"
+        );
+        assert_eq!(
+            endpoint("http://localhost:8080/").unwrap(),
+            "http://localhost:8080/api/upload_peak.php"
+        );
+        assert!(endpoint("mysql://user:pw@host/db").is_err());
+    }
 }

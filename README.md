@@ -56,7 +56,7 @@ The crate does not build on its own — it needs two sibling repos in the monore
 ### Build and test
 ```bash
 cargo build --release          # → target/release/oa_sample_analyzer
-cargo test --release --lib     # unit tests (78 at the time of writing)
+cargo test --release --lib     # unit tests (79 at the time of writing)
 ```
 
 ### CLI
@@ -74,7 +74,7 @@ oa_sample_analyzer <dir> [--out <path>] [--workers <n>] [--max-len <s>] [--clust
 | `--no-per-file` | off | Do not write per-file sidecars |
 | `--force` | off | Re-analyze even when a sidecar's analyzer version matches |
 | `--stride` | 1 | Analyze only every Nth file |
-| `--db-url` | none | Turn on upload to the cloud database. The value is ignored: records are POSTed (trimmed, 250 per request) to `https://scanalyzer.like.audio/api/upload_peak.php` (`src/Encoders/db.rs`) |
+| `--db-url` | none | Upload trimmed records, 250 per POST, to this `upload_peak.php` endpoint — a URL ending in `.php` is used as is, any other http(s) URL gets `api/upload_peak.php` appended, anything else is refused (`endpoint` in `src/Encoders/db.rs`). The desktop app passes `https://scanalyzer.like.audio/api/upload_peak.php` unless `SCAN_DB_URL` overrides it. |
 
 No directory → usage on stderr, exit 2. Unknown flags are ignored.
 

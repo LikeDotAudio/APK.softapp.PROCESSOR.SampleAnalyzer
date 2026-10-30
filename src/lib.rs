@@ -1,12 +1,18 @@
 //! oa_sample_analyzer — fast, parallel audio-sample analyzer.
 //!
 //! Walks a directory for audio files and, across a pool of worker threads (30 by
-//! default), computes for each: length, a pitch estimate (autocorrelation), and
-//! a spectral "complexity" (centroid + spread). Streams one JSON line per file
-//! to stdout so a GUI can graph progress live, then writes the aggregate
-//! `sample_cloud_data.PEAK` (each record includes the file NAME and FOLDER).
+//! default), analyzes each one whole: loudness, measured ADSR envelope, pitch and
+//! root note, tempo and ACID metadata, spectral and frame-based features (STFT,
+//! flux, MFCC, centroid, flatness, THD/clipping, inharmonicity), regions and
+//! bioacoustic syntax, a UCS classification and acoustic tags, and an 8-bit
+//! waveform preview. Streams one JSON line per file to stdout so a GUI can graph
+//! progress live, writes a `.PEAK` sidecar beside each file, clusters the library
+//! (K-means + PCA), then writes the aggregate `sample_cloud_data.PEAK` and the
+//! slim `sample_cloud_manifest.json`; with `--db-url` it also uploads trimmed
+//! records to that `upload_peak.php` endpoint.
 //!
 //! Usage: oa_sample_analyzer <dir> [--out <path>] [--workers <n>] [--max-len <s>]
+//!            [--clusters <k>] [--no-per-file] [--force] [--stride <n>] [--db-url <url>]
 //!
 //! The code is split one-purpose-per-module:
 //!   peak         — the streamed/serialized record struct

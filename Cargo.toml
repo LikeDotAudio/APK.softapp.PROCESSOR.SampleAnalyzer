@@ -2,7 +2,7 @@
 name = "oa-sample-analyzer"
 version = "0.1.0"
 edition = "2021"
-description = "Fast parallel audio-sample analyzer (length, pitch, spectral complexity) -> .PEAK JSON"
+description = "Fast parallel audio-sample analyzer: envelope, pitch, spectral, UCS class and regions -> .PEAK JSON"
 
 [[bin]]
 name = "oa_sample_analyzer"
