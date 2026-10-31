@@ -15,7 +15,7 @@ The Scanalyzer DSP core: audio file → `.PEAK` feature record (envelope, pitch,
 | SCANALYZER Web_Front `upload_peak.php?columns` | `db.rs` fetches the endpoint's upload allow-list (`upload_columns.json`) and trims to it | Conformist to the endpoint |
 | `upload_peak.php` (public site / scan-api) | HTTP POST via `ureq` in `src/Encoders/db.rs` | Customer |
 | Broker | `…/Protocols/sample_analyzer/outgoing/job` → `…/incoming/result`; retained `incoming/api`, `config` via apk-plugin-runner | Published Language |
-| APK.plugin.SDK (runner + contracts) | `SRC/Cargo.toml` by `tag = "sdk-v0.7"`; the image patches to the checkout's copies with `--config` | Conformist (versioned) |
+| APK.plugin.SDK (runner + contracts) | `SRC/Cargo.toml` by `tag = "sdk-v0.9"`; the image patches to the checkout's copies with `--config` | Conformist (versioned) |
 | POD.workers | compose `name: workers`, external network `apk-audio_default` | Hosted |
 
 ## Scorecard

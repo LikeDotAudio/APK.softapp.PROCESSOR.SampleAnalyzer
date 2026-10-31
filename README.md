@@ -74,7 +74,7 @@ cargo test --manifest-path SRC/Cargo.toml        # handle_job on an in-memory 44
 SRC/probe_job.sh                                 # live: one probe job to the running worker, PASS on its answer
 ```
 
-The worker links `apk-plugin-runner` and `apkaudio-contracts` from APK.plugin.SDK by tag (`sdk-v0.7`), like the THICK plugins; the image patches them (and the engine) back to the checkout's copies with `--config`, as the broker image does for SQL.
+The worker links `apk-plugin-runner` and `apkaudio-contracts` from APK.plugin.SDK by tag (`sdk-v0.9`), like the THICK plugins; the image patches them (and the engine) back to the checkout's copies with `--config`, as the broker image does for SQL.
 
 ## 🚀 Usage & Integration
 * **Web Portal Entry**: none of its own — `display.json` registers it as a `rust` execution engine (`autostart: false`); it is reached through the Scanalyzer app (`SCANALYZER_SUITE/SCANALYZER.Like.audio`)
