@@ -19,8 +19,13 @@ serde_json = "1"
 
 [dependencies]
 # The shared cutting DSP — regions.rs delegates region detection here so the stored .PEAK
-# regions and the interactive web Extractor run one implementation (no TS/Rust drift).
-extractor_engine = { path = "../../CAPTURE/CAPTURE.Extractor-Engine" }
+# regions and the interactive web Extractor run one implementation (no TS/Rust drift),
+# and `extractor_engine::PeakRegion` is the one definition of a .PEAK region.
+# BY COMMIT, NOT BY PATH (the house rule for a sibling, .apk.scripts/plugin_standalone.py):
+# a clone of this repository builds against exactly this engine. In the monorepo the
+# locally excluded .cargo/config.toml patches the URL back to the sibling folder.
+# Scanalyzer's wasm_extractor / src-tauri pin the SAME rev (one Region type).
+extractor_engine = { git = "https://github.com/LikeDotAudio/APK.softapp.CAPTURE.Extractor-Engine", rev = "e66e6bee0d863adbf94547a615ddbe9fdc431a11" }
 hound = "3.5"
 rustfft = "6.2"
 walkdir = "2.5"

@@ -11,7 +11,8 @@
 //! `contracts/rust/src/baremetal_io.rs`). The job carries the audio file's
 //! bytes; the result carries the `.PEAK` record `oa_sample_analyzer` writes
 //! beside a file in a batch scan — here nothing is written anywhere but the
-//! answer.
+//! answer. That record is a PUBLISHED format: `schema/peak.schema.json`, version
+//! in `metadata.schema_version`, and a test holds this result to it.
 //!
 //! THE FILE TOUCHES DISK FOR ONE JOB ONLY. `analyze::analyze` takes a path:
 //! it picks the decoder by extension (WAV through hound, the rest through
@@ -366,6 +367,25 @@ mod tests {
         assert_eq!(meta["analysis_depth"], "full");
         let pitch = out["result"]["musicality"]["pitch_hz"].as_f64().unwrap_or(0.0);
         assert!((pitch - 440.0).abs() < 5.0, "the analyzer hears the 440 Hz probe: {pitch}");
+    }
+
+    /// The bus contract: the `result` a client receives is a `.PEAK` record as the
+    /// published schema describes it (`schema/peak.schema.json`, versioned by
+    /// `metadata.schema_version`), not whatever the internal struct happens to be.
+    #[test]
+    fn the_result_is_a_record_of_the_published_peak_schema() {
+        let out = handle_job(
+            &job(json!({"job_id": "s1", "filename": "tone.wav", "content_b64": b64(&probe_wav())})),
+            LIMITS,
+        );
+        assert_eq!(out["ok"], true, "{out}");
+        assert_eq!(
+            out["result"]["metadata"]["schema_version"].as_u64(),
+            Some(oa_sample_analyzer::schema::PEAK_SCHEMA_VERSION as u64)
+        );
+        if let Err(errors) = oa_sample_analyzer::schema::validate(&out["result"]) {
+            panic!("the worker's result breaks peak.schema.json: {errors:#?}");
+        }
     }
 
     #[test]

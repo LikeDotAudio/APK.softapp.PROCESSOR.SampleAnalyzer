@@ -13,7 +13,10 @@
 //! (PHP then discards the body and the script sees an empty payload), and the
 //! `Vec<String>` fields arrived as JSON arrays that PDO stringified into the
 //! literal text "Array" — 1,000 rows in the live database still read that way.
-use serde::Serialize;
+use std::collections::BTreeMap;
+
+use serde::Deserialize;
+use serde_json::{Map, Value};
 
 use crate::peak::Peak;
 
@@ -55,168 +58,87 @@ pub fn init_db(_pool: &Pool) -> Result<(), String> {
     Ok(())
 }
 
-/// A record cut down to the stored columns. Mirrors `slimForUpload` in
-/// `Web_Front/src/peakUpload.ts`; keep both in step with `upload_peak.php`.
-#[derive(Serialize)]
-struct Upload<'a> {
-    metadata: Metadata<'a>,
-    classification: Classification<'a>,
-    ucs: Ucs<'a>,
-    spectral_features: Spectral,
-    musicality: Musicality<'a>,
-    envelope: Envelope<'a>,
-    regions: RegionCount,
+/// The endpoint's allow-list of stored fields, as `upload_peak.php` answers a GET
+/// with `?columns` (the file `upload_columns.json` beside it, in SCANALYZER.Like.audio
+/// `Web_Front/public/api/`). That one file is what the endpoint stores, what the web
+/// front end's `slimForUpload` keeps, and what this module keeps — it used to be three
+/// hand-kept lists (this struct tree, `peakUpload.ts`, the PHP) "kept in step" by a
+/// comment. Asking the endpoint also means a record is trimmed to what THAT server
+/// stores, whichever version it runs.
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+pub struct Columns {
+    pub sections: BTreeMap<String, Section>,
 }
 
-/// Just the count. The per-region detail is a whole nested analysis each and has
-/// no columns; the count is what lets the cloud answer "which files have more
-/// than one segment", which it previously could not answer at all.
-#[derive(Serialize)]
-struct RegionCount {
-    count: usize,
+/// One top-level section of a record: scalar fields kept as they are, plus lists
+/// kept as their first `limit` elements, each cut to `fields`.
+#[derive(Deserialize, Debug, Clone, PartialEq, Default)]
+pub struct Section {
+    #[serde(default)]
+    pub fields: Vec<String>,
+    #[serde(default)]
+    pub lists: BTreeMap<String, List>,
 }
 
-#[derive(Serialize)]
-struct Metadata<'a> {
-    name: &'a str,
-    /// The folder the endpoint files this record under. It reads THIS field —
-    /// it used to derive the folder from `name`, which is a bare filename, so
-    /// every record in the database landed under "." and same-named files
-    /// overwrote one another.
-    folder: &'a str,
-    path: &'a str,
-    analyzer_version: &'a str,
-    length_seconds: f64,
-    sample_rate: u32,
-    bit_depth: u16,
-    channels: u16,
-    source_format: &'a str,
-    lossy_source: bool,
-    dc_offset: f64,
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+pub struct List {
+    pub limit: usize,
+    pub fields: Vec<String>,
 }
 
-#[derive(Serialize)]
-struct Classification<'a> {
-    group: &'a str,
-    subgroup: &'a str,
-    timbre: &'a str,
-    acoustic_types: &'a [String],
-    instrument_family: &'a [String],
-    reason: &'a [String],
-}
-
-#[derive(Serialize)]
-struct Alternative<'a> {
-    category: &'a str,
-    subcategory: &'a str,
-}
-
-#[derive(Serialize)]
-struct Ucs<'a> {
-    category: &'a str,
-    subcategory: &'a str,
-    alternatives: Vec<Alternative<'a>>,
-}
-
-#[derive(Serialize)]
-struct Spectral {
-    root_mean_square_level: f64,
-    crest_factor: f64,
-    complexity: f64,
-    spectral_centroid_hz: f64,
-    spectral_rolloff_hz: f64,
-    spectral_flatness: f64,
-    harmonicity: f64,
-    total_harmonic_distortion: f64,
-    clipping_density: f64,
-}
-
-#[derive(Serialize)]
-struct Musicality<'a> {
-    pitch_hz: f64,
-    root_note_name: &'a str,
-    root_midi_note: i32,
-    root_cents_offset: f64,
-    beats_per_minute: f64,
-}
-
-#[derive(Serialize)]
-struct Envelope<'a> {
-    transient_count: usize,
-    attack_seconds: f64,
-    // Peak-relative, so null on a multi-event file — the column takes NULL and
-    // that is the honest value, not a zero.
-    envelope_decay_seconds: Option<f64>,
-    envelope_sustain_level: Option<f64>,
-    envelope_release_seconds: Option<f64>,
-    envelope_temporal_centroid: Option<f64>,
-    envelope_shape: &'a str,
-}
-
-fn slim(p: &Peak) -> Upload<'_> {
-    Upload {
-        metadata: Metadata {
-            name: &p.metadata.name,
-            folder: &p.metadata.folder,
-            path: &p.metadata.path,
-            analyzer_version: &p.metadata.analyzer_version,
-            length_seconds: p.metadata.length_seconds,
-            sample_rate: p.metadata.sample_rate,
-            bit_depth: p.metadata.bit_depth,
-            channels: p.metadata.channels,
-            source_format: &p.metadata.source_format,
-            lossy_source: p.metadata.lossy_source,
-            dc_offset: p.metadata.dc_offset,
-        },
-        classification: Classification {
-            group: &p.classification.group,
-            subgroup: &p.classification.subgroup,
-            timbre: &p.classification.timbre,
-            acoustic_types: &p.classification.acoustic_types,
-            instrument_family: &p.classification.instrument_family,
-            reason: &p.classification.reason,
-        },
-        ucs: Ucs {
-            category: &p.ucs.category,
-            subcategory: &p.ucs.subcategory,
-            // Only three alternatives have columns.
-            alternatives: p
-                .ucs
-                .alternatives
-                .iter()
-                .take(3)
-                .map(|a| Alternative { category: &a.category, subcategory: &a.subcategory })
-                .collect(),
-        },
-        spectral_features: Spectral {
-            root_mean_square_level: p.spectral_features.root_mean_square_level,
-            crest_factor: p.spectral_features.crest_factor,
-            complexity: p.spectral_features.complexity,
-            spectral_centroid_hz: p.spectral_features.spectral_centroid_hz,
-            spectral_rolloff_hz: p.spectral_features.spectral_rolloff_hz,
-            spectral_flatness: p.spectral_features.spectral_flatness,
-            harmonicity: p.spectral_features.harmonicity,
-            total_harmonic_distortion: p.spectral_features.total_harmonic_distortion,
-            clipping_density: p.spectral_features.clipping_density,
-        },
-        musicality: Musicality {
-            pitch_hz: p.musicality.pitch_hz,
-            root_note_name: &p.musicality.root_note_name,
-            root_midi_note: p.musicality.root_midi_note,
-            root_cents_offset: p.musicality.root_cents_offset,
-            beats_per_minute: p.musicality.beats_per_minute,
-        },
-        envelope: Envelope {
-            transient_count: p.envelope.transient_count,
-            attack_seconds: p.envelope.attack_seconds,
-            envelope_decay_seconds: p.envelope.envelope_decay_seconds,
-            envelope_sustain_level: p.envelope.envelope_sustain_level,
-            envelope_release_seconds: p.envelope.envelope_release_seconds,
-            envelope_temporal_centroid: p.envelope.envelope_temporal_centroid,
-            envelope_shape: &p.envelope.envelope_shape,
-        },
-        regions: RegionCount { count: p.regions.count },
+fn pick(source: Option<&Value>, fields: &[String]) -> Map<String, Value> {
+    let mut out = Map::new();
+    if let Some(Value::Object(src)) = source {
+        for f in fields {
+            if let Some(v) = src.get(f) {
+                out.insert(f.clone(), v.clone());
+            }
+        }
     }
+    out
+}
+
+/// A record cut down to the stored columns — same rule as `slimForUpload` in
+/// Scanalyzer's `Web_Front/src/peakUpload.ts`, over the same `Columns`.
+pub fn slim(record: &Value, columns: &Columns) -> Value {
+    let mut out = Map::new();
+    for (name, section) in &columns.sections {
+        let src = record.get(name);
+        let mut kept = pick(src, &section.fields);
+        for (list, spec) in &section.lists {
+            let items: Vec<Value> = src
+                .and_then(|s| s.get(list))
+                .and_then(Value::as_array)
+                .map(|a| a.iter().take(spec.limit).map(|item| Value::Object(pick(Some(item), &spec.fields))).collect())
+                .unwrap_or_default();
+            kept.insert(list.clone(), Value::Array(items));
+        }
+        out.insert(name.clone(), Value::Object(kept));
+    }
+    Value::Object(out)
+}
+
+/// The URL that answers with the endpoint's `Columns`.
+fn columns_url(endpoint: &str) -> String {
+    let sep = if endpoint.contains('?') { '&' } else { '?' };
+    format!("{endpoint}{sep}columns")
+}
+
+/// Ask the endpoint which fields it stores. An endpoint too old to say is refused
+/// rather than guessed at: guessing is the hand-kept copy this replaced.
+pub fn fetch_columns(pool: &Pool) -> Result<Columns, String> {
+    let url = columns_url(&pool.url);
+    let resp = ureq::get(&url).call().map_err(|e| {
+        format!("{url} did not list its upload columns ({e}) — deploy the current upload_peak.php")
+    })?;
+    resp.into_json::<Columns>().map_err(|e| format!("{url}: not an upload-columns document: {e}"))
+}
+
+/// The upload token, when the endpoint requires one (`SCAN_UPLOAD_TOKEN` set on the
+/// server): `APK_SCAN_UPLOAD_TOKEN` in this process's environment, sent as
+/// `X-Upload-Token`. Never logged.
+fn upload_token() -> Option<String> {
+    std::env::var("APK_SCAN_UPLOAD_TOKEN").ok().filter(|t| !t.trim().is_empty())
 }
 
 /// POST every record, in chunks. Returns how many rows the SERVER reports it
@@ -228,11 +150,20 @@ pub fn write_peaks(pool: &Pool, peaks: &[Peak]) -> Result<usize, String> {
         return Ok(0);
     }
 
+    let columns = fetch_columns(pool)?;
+    let token = upload_token();
     let mut stored = 0usize;
     for chunk in peaks.chunks(CHUNK) {
-        let body: Vec<Upload> = chunk.iter().map(slim).collect();
-        let resp = ureq::post(&pool.url)
-            .set("Content-Type", "application/json")
+        let body: Vec<Value> = chunk
+            .iter()
+            .map(|p| serde_json::to_value(p).map(|v| slim(&v, &columns)))
+            .collect::<Result<_, _>>()
+            .map_err(|e| format!("a record does not serialise: {e}"))?;
+        let mut req = ureq::post(&pool.url).set("Content-Type", "application/json");
+        if let Some(t) = &token {
+            req = req.set("X-Upload-Token", t);
+        }
+        let resp = req
             .send_json(&body)
             .map_err(|e| match e {
                 // A 4xx/5xx carries the endpoint's own explanation — surface it
@@ -260,7 +191,50 @@ pub fn write_peaks(pool: &Pool, peaks: &[Peak]) -> Result<usize, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::endpoint;
+    use super::{columns_url, endpoint, slim, Columns};
+    use serde_json::json;
+
+    /// The shape `upload_columns.json` has; trimmed to one field per kind of rule.
+    fn columns() -> Columns {
+        serde_json::from_value(json!({
+            "sections": {
+                "metadata": {"fields": ["name", "analyzer_version"]},
+                "ucs": {"fields": ["category"], "lists": {"alternatives": {"limit": 2, "fields": ["category"]}}},
+                "regions": {"fields": ["count"]}
+            }
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn slim_keeps_only_the_listed_fields() {
+        let record = json!({
+            "metadata": {"name": "kick.wav", "analyzer_version": "abc", "path": "/x/kick.wav"},
+            "ucs": {"category": "DRUMS", "confidence": 0.9,
+                    "alternatives": [{"category": "A", "score": 1}, {"category": "B"}, {"category": "C"}]},
+            "regions": {"count": 2, "regions": [{"index": 0}]},
+            "preview": {"peak_data_base64": "AAAA"}
+        });
+        let out = slim(&record, &columns());
+        assert_eq!(out, json!({
+            "metadata": {"name": "kick.wav", "analyzer_version": "abc"},
+            "ucs": {"category": "DRUMS", "alternatives": [{"category": "A"}, {"category": "B"}]},
+            "regions": {"count": 2}
+        }));
+    }
+
+    #[test]
+    fn a_missing_section_is_sent_empty_not_dropped() {
+        let out = slim(&json!({}), &columns());
+        assert_eq!(out["metadata"], json!({}));
+        assert_eq!(out["ucs"]["alternatives"], json!([]));
+    }
+
+    #[test]
+    fn the_columns_question_is_a_query_on_the_endpoint() {
+        assert_eq!(columns_url("https://h/api/upload_peak.php"), "https://h/api/upload_peak.php?columns");
+        assert_eq!(columns_url("https://h/u.php?x=1"), "https://h/u.php?x=1&columns");
+    }
 
     #[test]
     fn db_url_names_the_endpoint() {

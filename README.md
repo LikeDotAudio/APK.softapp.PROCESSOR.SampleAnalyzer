@@ -22,12 +22,12 @@ A standalone Git repository, mounted as a submodule at `PODS/POD.THIN/Softapps/P
 | The worker `Worker-SAMPLE_ANALYZER` (`SRC/`, `Docker/`; pod `PODS/POD.workers`) | Path dependency; calls `analyze::analyze` on one file posted as a job on the bus and answers with its `.PEAK` record |
 
 ### Build-time inputs (`build.rs`)
-The crate does not build on its own — it needs two sibling repos in the monorepo:
+Two sibling repositories feed the build:
 
-* `../../CAPTURE/CAPTURE.Extractor-Engine` — the shared region-cutting DSP (`extractor_engine` crate). `regions.rs` delegates to it so stored `.PEAK` regions and the web Extractor run one implementation.
-* `../../DATATYPE/DATATYPE.soundfx.UCS/categories/*.json` and `producer_synonyms.json` — the UCS category signatures and the producer-vocabulary overlay. `build.rs` splices them (minified) into `ucs_signed.json` and `ucs_roles.json` in `OUT_DIR`, embedded with `include_str!`. Files with `"matchable": false` (MUSICPROD) go to the roles bundle, not the matcher. An overlay id that matches no UCS `category_id` fails the build.
+* `CAPTURE.Extractor-Engine` — the shared region-cutting DSP (`extractor_engine` crate), pinned **by commit** (`git = …, rev = …` in `Cargo.toml`). `regions.rs` delegates to it so stored `.PEAK` regions and the web Extractor run one implementation, and its `PeakRegion` is the one definition of a `.PEAK` region. In the monorepo a locally excluded `.cargo/config.toml` (and `SRC/.cargo/config.toml`) patches the URL back to `../../CAPTURE/CAPTURE.Extractor-Engine`, so local edits compile in without a push.
+* `DATATYPE.soundfx.UCS` `categories/*.json` and `producer_synonyms.json` — the UCS category signatures and the producer-vocabulary overlay, read from `$APK_UCS_DIR` when set (a standalone clone sets it to a UCS checkout), else from the sibling `../../DATATYPE/DATATYPE.soundfx.UCS`. `build.rs` splices them (minified) into `ucs_signed.json` and `ucs_roles.json` in `OUT_DIR`, embedded with `include_str!`. Files with `"matchable": false` (MUSICPROD) go to the roles bundle, not the matcher. An overlay id that matches no UCS `category_id` fails the build.
 
-`build.rs` also stamps `ANALYZER_HASH` — `ANALYZER_VERSION` in `src/Core/version.rs` — a 12-hex-digit FNV-1a hash of `src/**/*.rs` and `../../CAPTURE/CAPTURE.Extractor-Engine/src/**/*.rs` with comments and whitespace stripped, plus the bundled UCS data. A comment or formatting edit keeps the version; the same source gives the same version on any machine.
+`build.rs` also stamps `ANALYZER_HASH` — `ANALYZER_VERSION` in `src/Core/version.rs` — a 12-hex-digit FNV-1a hash of `src/**/*.rs` and the extractor engine's `src/**/*.rs` (found through its `links` metadata, `DEP_EXTRACTOR_ENGINE_SRC_DIR`) with comments and whitespace stripped, plus the bundled UCS data. A comment or formatting edit keeps the version; the same source gives the same version on any machine.
 
 > ⚠️ A code or UCS data change produces a new analyzer version, and every existing `.PEAK` sidecar is then re-analyzed on the next scan. The build prints `warning: … ANALYZER_VERSION changed <old> -> <new>` when that happens, and a scan that re-analyzes such sidecars prints `Note: N .PEAK sidecar(s) were written by analyzer <old>…` and emits a `{"type":"stale"}` event (`stale` is also counted in `done`).
 
@@ -67,8 +67,11 @@ FLAC both came back `ok: true`, `analysis_depth: full`, `pitch_hz: 441`.
 
 ```bash
 docker compose -f PODS/POD.workers/Docker/docker-compose.yml up -d --build sample-analyzer
-cargo test --manifest-path SRC/Cargo.toml        # handle_job on an in-memory 440 Hz WAV, the self test
+cargo test --manifest-path SRC/Cargo.toml        # handle_job on an in-memory 440 Hz WAV, the self test, the result against the .PEAK schema
+SRC/probe_job.sh                                 # live: one probe job to the running worker, PASS on its answer
 ```
+
+The worker links `apk-plugin-runner` and `apkaudio-contracts` from APK.plugin.SDK by tag (`sdk-v0.5`), like the THICK plugins; the image patches them (and the engine) back to the checkout's copies with `--config`, as the broker image does for SQL.
 
 ## 🚀 Usage & Integration
 * **Web Portal Entry**: none of its own — `display.json` registers it as a `rust` execution engine (`autostart: false`); it is reached through the Scanalyzer app (`SCANALYZER_SUITE/SCANALYZER.Like.audio`)
@@ -77,8 +80,12 @@ cargo test --manifest-path SRC/Cargo.toml        # handle_job on an in-memory 44
 ### Build and test
 ```bash
 cargo build --release          # → target/release/oa_sample_analyzer
-cargo test --release --lib     # unit tests (79 at the time of writing)
+./check.sh                     # both crates' tests (analyzer + worker, incl. the .PEAK schema contract)
+./check.sh --live              # ... plus SRC/probe_job.sh against the running worker
 ```
+
+### The `.PEAK` record is a published format
+[`schema/peak.schema.json`](schema/peak.schema.json) is the contract every reader holds (the Scanalyzer front end, the corpus API, clients of the worker's `incoming/result`). Its version is `metadata.schema_version` (`PEAK_SCHEMA_VERSION` in `src/Core/schema.rs`); it moves only when a field is renamed, removed or retyped. `metadata.analyzer_version` stays what it was: "does this record need re-analysis". `oa_sample_analyzer::schema::{PEAK_SCHEMA, validate}` hand the schema and a checker to any crate that links this one; tests hold an analysed record and the worker's result to it.
 
 ### CLI
 ```
@@ -95,7 +102,7 @@ oa_sample_analyzer <dir> [--out <path>] [--workers <n>] [--max-len <s>] [--clust
 | `--no-per-file` | off | Do not write per-file sidecars |
 | `--force` | off | Re-analyze even when a sidecar's analyzer version matches |
 | `--stride` | 1 | Analyze only every Nth file |
-| `--db-url` | none | Upload trimmed records, 250 per POST, to this `upload_peak.php` endpoint — a URL ending in `.php` is used as is, any other http(s) URL gets `api/upload_peak.php` appended, anything else is refused (`endpoint` in `src/Encoders/db.rs`). The desktop app passes `https://scanalyzer.like.audio/api/upload_peak.php` unless `SCAN_DB_URL` overrides it. |
+| `--db-url` | none | Upload trimmed records, 250 per POST, to this `upload_peak.php` endpoint — trimmed to the fields the endpoint itself lists (`GET upload_peak.php?columns`, its `upload_columns.json`), with `X-Upload-Token: $APK_SCAN_UPLOAD_TOKEN` when that is set — a URL ending in `.php` is used as is, any other http(s) URL gets `api/upload_peak.php` appended, anything else is refused (`endpoint` in `src/Encoders/db.rs`). The desktop app passes `https://scanalyzer.like.audio/api/upload_peak.php` unless `SCAN_DB_URL` overrides it. |
 
 No directory → usage on stderr, exit 2. Unknown flags are ignored.
 

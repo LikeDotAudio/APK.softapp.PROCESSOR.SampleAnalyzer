@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/LikeDotAudio/APK.softapp.PROCESSOR.SampleAnalyzer/schema/peak.schema.json",
+  "title": ".PEAK record",
+  "description": "One analysed audio file, as oa_sample_analyzer writes it: the per-file sidecar, one element of sample_cloud_data.PEAK, and the `result` of a Worker-SAMPLE_ANALYZER job (sample_analyzer/incoming/result). Owned by PROCESSOR.SampleAnalyzer (src/Core/peak.rs). `metadata.schema_version` is THIS document's version: it moves only when a field is renamed, removed or changes type; adding a field does not move it. `metadata.analyzer_version` is a different thing — a hash of the analyzer's inputs that says whether a record must be re-analysed. A record with no schema_version (0) predates this schema and is read leniently. Region fields are extractor_engine::PeakRegion (CAPTURE.Extractor-Engine), the one definition shared with the Extractor.",
+  "x-schema-version": 1,
+  "type": "object",
+  "required": ["metadata", "classification", "envelope", "spectral_features", "musicality", "unsupervised", "ucs"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["analyzer_version", "name", "folder", "sub", "path", "length_seconds", "sample_rate", "bit_depth", "channels", "source_format", "lossy_source", "dc_offset", "trailing_silence_ms"],
+      "properties": {
+        "schema_version": {"type": "integer", "minimum": 0},
+        "analyzer_version": {"type": "string"},
+        "name": {"type": "string"},
+        "folder": {"type": "string"},
+        "sub": {"type": "string"},
+        "path": {"type": "string"},
+        "length_seconds": {"type": "number"},
+        "sample_rate": {"type": "integer", "minimum": 0},
+        "bit_depth": {"type": "integer", "minimum": 0},
+        "channels": {"type": "integer", "minimum": 0},
+        "source_format": {"type": "string"},
+        "lossy_source": {"type": "boolean"},
+        "dc_offset": {"type": "number"},
+        "trailing_silence_ms": {"type": "number"},
+        "analysis_depth": {"type": "string"}
+      }
+    },
+    "classification": {
+      "type": "object",
+      "properties": {
+        "group": {"type": "string"},
+        "subgroup": {"type": "string"},
+        "timbre": {"type": "string"},
+        "length_class": {"type": "string"},
+        "reason": {"type": "array", "items": {"type": "string"}},
+        "audit": {"type": "boolean"},
+        "acoustic_types": {"type": "array", "items": {"type": "string"}},
+        "sound_design_roles": {"type": "array", "items": {"type": "string"}},
+        "instrument_family": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "envelope": {"type": "object"},
+    "spectral_features": {"type": "object"},
+    "musicality": {"type": "object"},
+    "unsupervised": {"type": "object"},
+    "ucs": {
+      "type": "object",
+      "properties": {
+        "category": {"type": "string"},
+        "subcategory": {"type": "string"},
+        "id": {"type": "string"},
+        "confidence": {"type": "number"},
+        "alternatives": {"type": "array", "items": {"type": "object"}},
+        "synonyms": {"type": "array", "items": {"type": "string"}},
+        "reason": {"type": "string"}
+      }
+    },
+    "regions": {
+      "type": "object",
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "detection_threshold_decibels": {"type": "number"},
+        "minimum_silence_seconds": {"type": "number"},
+        "minimum_region_seconds": {"type": "number"},
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["index", "start_seconds", "end_seconds", "duration_seconds"],
+            "properties": {
+              "index": {"type": "integer", "minimum": 0},
+              "start_seconds": {"type": "number"},
+              "end_seconds": {"type": "number"},
+              "duration_seconds": {"type": "number"},
+              "peak_amplitude": {"type": "number"},
+              "name": {"type": "string"},
+              "analysis": {"type": ["object", "null"]}
+            }
+          }
+        }
+      }
+    },
+    "preview": {"type": "object"},
+    "bioacoustic_syntax": {"type": ["object", "null"]}
+  }
+}

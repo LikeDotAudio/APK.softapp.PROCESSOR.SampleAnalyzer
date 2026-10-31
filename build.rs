@@ -1,12 +1,14 @@
 //! Two jobs at compile time:
 //!
 //! 1. Bundle the UCS category data. The signed category files in UCS/categories/
+//!    (DATATYPE.soundfx.UCS — located by `ucs_root()`)
 //!    are the source of truth; the analyzer used to carry its own stale copy,
 //!    which drifted. We now splice them into one array in OUT_DIR and embed
 //!    that, so the two cannot disagree.
 //!
 //! 2. Stamp the build with an analyzer version: a hash of what the analyzer
 //!    computes from — the Rust under src/ and the shared extractor engine's src/
+//!    (located through its `links` metadata, `DEP_EXTRACTOR_ENGINE_SRC_DIR`)
 //!    with comments and layout stripped, plus the bundled UCS data. A comment-only
 //!    or reformatting edit leaves it unchanged; a code or data edit changes it,
 //!    and every existing .PEAK sidecar carrying another version is then
@@ -24,17 +26,48 @@ fn sorted_files(dir: &Path, ext: &str) -> Vec<PathBuf> {
     v
 }
 
-fn main() {
-    println!("cargo:rerun-if-changed=src");
-    println!("cargo:rerun-if-changed={EXTRACTOR_SRC}");
-    println!("cargo:rerun-if-changed=../../DATATYPE/DATATYPE.soundfx.UCS/categories");
-    println!("cargo:rerun-if-changed=../../DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json");
+/// Where the UCS bundle (`categories/*.json` + `producer_synonyms.json`) is read from,
+/// first match wins:
+///   1. `APK_UCS_DIR` — an explicit DATATYPE.soundfx.UCS checkout (a standalone clone
+///      of this repository sets it);
+///   2. `DEP_APK_UCS_DIR` — reserved for when DATATYPE.soundfx.UCS ships as a cargo
+///      package with `links` (handoff filed 2026-10-30) and is pinned here by `rev`;
+///   3. the monorepo sibling `../../DATATYPE/DATATYPE.soundfx.UCS`.
+fn ucs_root() -> PathBuf {
+    println!("cargo:rerun-if-env-changed=APK_UCS_DIR");
+    for var in ["APK_UCS_DIR", "DEP_APK_UCS_DIR"] {
+        if let Ok(dir) = std::env::var(var) {
+            if !dir.trim().is_empty() {
+                return PathBuf::from(dir.trim());
+            }
+        }
+    }
+    PathBuf::from("../../DATATYPE/DATATYPE.soundfx.UCS")
+}
 
-    let ucs_dir_path = if Path::new("../../DATATYPE/DATATYPE.soundfx.UCS/categories").exists() {
-        Path::new("../../DATATYPE/DATATYPE.soundfx.UCS/categories")
-    } else {
-        Path::new("../UCS/categories")
-    };
+/// The extractor engine's `src/`, as cargo resolved the crate (git checkout or local
+/// `[patch]` path): its build script publishes it through `links = "extractor_engine"`.
+fn extractor_src() -> PathBuf {
+    PathBuf::from(std::env::var("DEP_EXTRACTOR_ENGINE_SRC_DIR").expect(
+        "DEP_EXTRACTOR_ENGINE_SRC_DIR unset: extractor_engine >= 0.2.0 (links = \"extractor_engine\") is required",
+    ))
+}
+
+fn main() {
+    let ucs = ucs_root();
+    let extractor = extractor_src();
+    println!("cargo:rerun-if-changed=src");
+    println!("cargo:rerun-if-changed={}", extractor.display());
+    println!("cargo:rerun-if-changed={}", ucs.join("categories").display());
+    println!("cargo:rerun-if-changed={}", ucs.join("producer_synonyms.json").display());
+
+    let ucs_dir = ucs.join("categories");
+    let ucs_dir_path = ucs_dir.as_path();
+    assert!(
+        ucs_dir_path.is_dir(),
+        "no UCS bundle at {} — set APK_UCS_DIR to a DATATYPE.soundfx.UCS checkout",
+        ucs.display()
+    );
     let cat_files: Vec<PathBuf> = sorted_files(ucs_dir_path, "json")
         .into_iter()
         .filter(|p| p.file_name().and_then(|x| x.to_str()) != Some("index.json"))
@@ -73,11 +106,8 @@ fn main() {
     // OBJECTS/FASHION. A music library therefore has no UCS words to match on. The overlay
     // adds those words, keyed by UCS category_id, and is merged here rather than edited
     // into UCS/categories/ so the vendored spec stays pristine and upgradeable.
-    let overlay_path = if Path::new("../../DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json").exists() {
-        Path::new("../../DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json")
-    } else {
-        Path::new("../UCS/producer_synonyms.json")
-    };
+    let overlay_file = ucs.join("producer_synonyms.json");
+    let overlay_path = overlay_file.as_path();
     let overlay: serde_json::Value = {
         let text = fs::read_to_string(overlay_path)
             .unwrap_or_else(|e| panic!("read {}: {e}", overlay_path.display()));
@@ -160,7 +190,7 @@ fn main() {
     // library re-analyze. Comments and whitespace are stripped before hashing,
     // so only a change to what the code or data says moves the version.
     let mut h = Fnv::new();
-    for dir in [Path::new("src"), Path::new(EXTRACTOR_SRC)] {
+    for dir in [Path::new("src"), extractor.as_path()] {
         if !dir.exists() {
             continue;
         }
@@ -195,9 +225,6 @@ fn main() {
     let _ = fs::write(&last, &version);
     println!("cargo:rustc-env=ANALYZER_HASH={version}");
 }
-
-/// The shared region-cutting DSP; its code shapes stored regions, so it is an input too.
-const EXTRACTOR_SRC: &str = "../../CAPTURE/CAPTURE.Extractor-Engine/src";
 
 fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(rd) = fs::read_dir(dir) else { return };

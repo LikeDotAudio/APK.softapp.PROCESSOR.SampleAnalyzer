@@ -3,12 +3,17 @@
 #   docker build -f 'PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/Docker/Dockerfile' -t worker-sample-analyzer:local .
 #
 # ⚠️ THE BUILD CONTEXT IS THE REPO ROOT (`context: ../../../../../..` in the
-#    compose file beside this one): the worker links apkaudio-contracts and
-#    apk-plugin-runner, and the analyzer itself reads two sibling
-#    repositories at build time (build.rs): CAPTURE.Extractor-Engine (linked,
-#    and hashed into ANALYZER_VERSION) and DATATYPE.soundfx.UCS (the category
-#    bundle it embeds). Every COPY source below is a REAL repo-root path
-#    (PODS/README.md rule 1). Same recipe as DATATYPE.wireless.CSV's worker.
+#    compose file beside this one) — BY DESIGN, the same rule as the plugin and
+#    broker images (.apk.scripts/plugin_standalone.py; DATABUS.Broker.MQTT's
+#    Dockerfile): the crates name their siblings by git (the SDK by tag
+#    `sdk-v0.5`, CAPTURE.Extractor-Engine by `rev`), so `git archive HEAD` of
+#    this repository builds on its own; THE IMAGE builds the checkout instead,
+#    patching those git names back to the copied local paths with `--config`,
+#    so it never fetches GitHub and ships exactly the runner, contracts and
+#    engine the rest of the bench runs. The UCS bundle (DATATYPE.soundfx.UCS)
+#    is still read by build.rs from the sibling folder until that repository
+#    ships as a cargo package (handoff filed 2026-10-30). Every COPY source
+#    below is a REAL repo-root path (PODS/README.md rule 1).
 
 # ---------- build ----------
 FROM rust:1.94-bookworm AS build
@@ -23,8 +28,10 @@ COPY ["contracts/rust",   "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/rust"]
 COPY ["contracts/tokens", "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/tokens"]
 COPY ["PODS/POD.THICK/DISCOVERY.Engine/SRC/Cargo.toml", "./PODS/POD.THICK/DISCOVERY.Engine/SRC/Cargo.toml"]
 COPY ["PODS/POD.THICK/DISCOVERY.Engine/SRC/RUNNER",     "./PODS/POD.THICK/DISCOVERY.Engine/SRC/RUNNER"]
-# The analyzer's build-time siblings (see the header).
+# The analyzer's build-time siblings (see the header): the engine, patched to
+# this path below, and the UCS bundle build.rs embeds.
 COPY ["PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine/Cargo.toml", "./PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine/Cargo.toml"]
+COPY ["PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine/build.rs",   "./PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine/build.rs"]
 COPY ["PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine/src",        "./PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine/src"]
 COPY ["PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.soundfx.UCS/categories",             "./PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.soundfx.UCS/categories"]
 COPY ["PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json", "./PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json"]
@@ -33,11 +40,23 @@ COPY ["PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.js
 ARG TOOL=PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer
 COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/Cargo.toml", "./PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/Cargo.toml"]
 COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/build.rs",   "./PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/build.rs"]
+COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/schema",     "./PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/schema"]
 COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/src",        "./PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/src"]
 COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/SRC",        "./PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/SRC"]
 
-RUN cargo build --release --locked --manifest-path "$TOOL/SRC/Cargo.toml" --bins \
- && mkdir -p /out \
+# The three git names, patched to the copied paths (the SRC/.cargo/config.toml a
+# checkout uses is not read here: cargo looks for config from the cwd, /src).
+ARG SDK=https://github.com/LikeDotAudio/APK.plugin.SDK
+ARG ENGINE=https://github.com/LikeDotAudio/APK.softapp.CAPTURE.Extractor-Engine
+RUN set -e; \
+    P1="patch.\"$SDK\".apk-plugin-runner.path=\"PODS/POD.THICK/DISCOVERY.Engine/SRC/RUNNER\""; \
+    P2="patch.\"$SDK\".apkaudio-contracts.path=\"PODS/POD.THICK/NODE.BareMetal/SRC/contracts/rust\""; \
+    P3="patch.\"$ENGINE\".extractor_engine.path=\"PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine\""; \
+    cargo build --release --locked --config "$P1" --config "$P2" --config "$P3" \
+        --manifest-path "$TOOL/SRC/Cargo.toml" --bin apk-worker-sample-analyzer; \
+    cargo build --release --locked --config "$P1" --config "$P2" --config "$P3" \
+        --manifest-path "$TOOL/SRC/Cargo.toml" -p apk-plugin-runner --bin apk-plugin-health; \
+    mkdir -p /out \
  && cp target/release/apk-worker-sample-analyzer target/release/apk-plugin-health /out/
 
 # ---------- runtime ----------

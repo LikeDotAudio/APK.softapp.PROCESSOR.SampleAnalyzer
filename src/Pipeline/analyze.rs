@@ -113,6 +113,7 @@ fn preview_only_record(
 
     Peak {
         metadata: crate::peak::Metadata {
+            schema_version: crate::schema::PEAK_SCHEMA_VERSION,
             analyzer_version: ANALYZER_VERSION.to_string(),
             name: name.to_string(),
             folder: folder.to_string(),
@@ -307,6 +308,7 @@ fn analyze_core(
 
     let mut peak = finish(Peak {
         metadata: crate::peak::Metadata {
+            schema_version: crate::schema::PEAK_SCHEMA_VERSION,
             analyzer_version: ANALYZER_VERSION.to_string(),
             name: name.to_string(),
             folder: folder.to_string(),

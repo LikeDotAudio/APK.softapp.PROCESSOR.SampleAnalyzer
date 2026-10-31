@@ -109,6 +109,8 @@ pub mod regions;
 pub mod run;
 #[path = "Encoders/sidecar.rs"]
 pub mod sidecar;
+#[path = "Core/schema.rs"]
+pub mod schema;
 #[path = "Scananalyzers/Spectral/spectrum.rs"]
 pub mod spectrum;
 #[path = "Clustering/sqdist.rs"]

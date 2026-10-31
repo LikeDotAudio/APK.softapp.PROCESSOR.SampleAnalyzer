@@ -31,12 +31,7 @@ pub fn detect_regions(envelope: &[f64], rate_hz: f64, length_seconds: f64) -> Re
         extractor_engine::detect_regions_with_params(envelope, rate_hz, length_seconds, &params)
             .into_iter()
             .map(|r| Region {
-                index: r.index,
-                start_seconds: r.start_seconds,
-                end_seconds: r.end_seconds,
-                duration_seconds: r.duration_seconds,
-                peak_amplitude: r.peak_amplitude,
-                name: r.name,
+                span: r.span,
                 analysis: None, // filled in by analyze_core for multi-region files
             })
             .collect();

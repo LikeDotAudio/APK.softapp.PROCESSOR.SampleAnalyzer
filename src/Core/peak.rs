@@ -22,6 +22,10 @@ fn lufs_from_json<'de, D: Deserializer<'de>>(d: D) -> Result<f64, D::Error> {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Metadata {
+    /// The `.PEAK` schema version (`schema/peak.schema.json`, `crate::schema`). 0 on
+    /// records written before the schema was published.
+    #[serde(default)]
+    pub schema_version: u32,
     pub analyzer_version: String,
     pub name: String,
     pub folder: String,
@@ -265,18 +269,17 @@ pub struct Unsupervised {
 }
 
 /// One sounding stretch inside a file, bounded by silence — its in-point and
-/// out-point. `name` is empty from the analyzer and filled in by the user in the
-/// Extractor editor.
+/// out-point. The `.PEAK` region fields (`index`, `start_seconds`, `end_seconds`,
+/// `duration_seconds`, `peak_amplitude`, `name`) are `extractor_engine::PeakRegion`,
+/// flattened: that struct is their ONE definition, shared with the Extractor's
+/// `Region`, so the stored and the interactive regions cannot drift field by field.
+/// Derefs to it, so `region.start_seconds` reads as before. `name` is empty from the
+/// analyzer and filled in by the user in the Extractor editor.
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(default)]
 pub struct Region {
-    pub index: usize,
-    pub start_seconds: f64,
-    pub end_seconds: f64,
-    pub duration_seconds: f64,
-    /// Loudest RMS-envelope value inside the region (linear, 0..~1).
-    pub peak_amplitude: f64,
-    pub name: String,
+    #[serde(flatten)]
+    pub span: extractor_engine::PeakRegion,
     /// The full analysis of JUST this sub-clip's audio — every feature + classification a
     /// standalone file gets, computed by re-running the pipeline on the region's slice.
     /// `None` on records from before per-region analysis, and on single-region files (the
@@ -284,6 +287,19 @@ pub struct Region {
     /// `Peak` contains `Regions`, so a `Region` owning a `Peak` would be infinitely sized.
     #[serde(default)]
     pub analysis: Option<Box<Peak>>,
+}
+
+impl std::ops::Deref for Region {
+    type Target = extractor_engine::PeakRegion;
+    fn deref(&self) -> &extractor_engine::PeakRegion {
+        &self.span
+    }
+}
+
+impl std::ops::DerefMut for Region {
+    fn deref_mut(&mut self) -> &mut extractor_engine::PeakRegion {
+        &mut self.span
+    }
 }
 
 /// Every region found in a file, plus the silence-gate settings that found them.

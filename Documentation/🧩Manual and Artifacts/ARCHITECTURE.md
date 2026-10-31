@@ -32,7 +32,7 @@ analysed within 5 Hz). The pod is `PODS/POD.workers`.
 
 ## Build-time inputs — `build.rs`
 
-1. Reads `../../DATATYPE/DATATYPE.soundfx.UCS/categories/*.json` (minus `index.json`) and
+1. Reads `<ucs>/categories/*.json` (minus `index.json`) and
    `producer_synonyms.json`, merges the overlay's synonyms into matching `category_id`s (a
    miss fails the build), minifies, and writes `ucs_signed.json` (matchable) and
    `ucs_roles.json` (`"matchable": false`, e.g. MUSICPROD) to `OUT_DIR`. `ucs.rs` embeds them
@@ -42,7 +42,26 @@ analysed within 5 Hz). The pod is `PODS/POD.workers`.
    digits. When it differs from the last build's (`OUT_DIR/analyzer_version.txt`) the build
    prints a `cargo:warning`. `rerun-if-changed` covers both `src/` trees and the UCS data.
 
-`Cargo.toml` also path-depends on `../../CAPTURE/CAPTURE.Extractor-Engine`.
+`<ucs>` is `$APK_UCS_DIR`, else `$DEP_APK_UCS_DIR` (reserved for when DATATYPE.soundfx.UCS
+ships as a cargo package), else the sibling `../../DATATYPE/DATATYPE.soundfx.UCS`. The extractor
+engine's `src/` comes from `DEP_EXTRACTOR_ENGINE_SRC_DIR`, which the engine's own build script
+publishes (`links = "extractor_engine"`) wherever cargo resolved it.
+
+`Cargo.toml` names the engine by `git = …, rev = …`; the worker (`SRC/Cargo.toml`) names the SDK
+by tag `sdk-v0.5`. Both are patched back to local paths by locally excluded `.cargo/config.toml`
+files in the monorepo, and by `--config` in `Docker/Dockerfile`.
+
+## The published record — `schema/peak.schema.json`
+The `.PEAK` record (sidecar, cloud file, worker result) is described by the JSON Schema in
+`schema/`, version `PEAK_SCHEMA_VERSION` = `metadata.schema_version` (`src/Core/schema.rs`).
+`schema::validate` checks the subset the file uses; tests: `an_analysed_record_satisfies_the_published_schema`
+(library) and `the_result_is_a_record_of_the_published_peak_schema` (worker).
+
+## Upload — `db.rs`
+`write_peaks` first asks the endpoint what it stores (`GET upload_peak.php?columns`, served from
+Scanalyzer's `Web_Front/public/api/upload_columns.json`), then POSTs each record trimmed to that
+allow-list (`slim`), 250 per request, with `X-Upload-Token` from `APK_SCAN_UPLOAD_TOKEN` when set.
+An endpoint that cannot list its columns is refused, not guessed at.
 
 ## One run — `run::run`
 

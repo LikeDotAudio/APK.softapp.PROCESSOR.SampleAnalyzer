@@ -14,6 +14,7 @@ use crate::peak::{Region, Regions};
 pub(super) fn region(index: usize, start: f64, duration: f64, kind: usize) -> Region {
     let mut p = crate::peak::Peak {
         metadata: crate::peak::Metadata {
+            schema_version: crate::schema::PEAK_SCHEMA_VERSION,
             analyzer_version: String::new(),
             name: String::new(),
             folder: String::new(),
@@ -52,12 +53,14 @@ pub(super) fn region(index: usize, start: f64, duration: f64, kind: usize) -> Re
     p.spectral_features.mel_frequency_cepstral_coefficients = mfcc;
     p.envelope.envelope_temporal_centroid = Some(0.3 + 0.2 * kind as f64);
     Region {
-        index,
-        start_seconds: start,
-        end_seconds: start + duration,
-        duration_seconds: duration,
-        peak_amplitude: 0.8,
-        name: String::new(),
+        span: extractor_engine::PeakRegion {
+            index,
+            start_seconds: start,
+            end_seconds: start + duration,
+            duration_seconds: duration,
+            peak_amplitude: 0.8,
+            name: String::new(),
+        },
         analysis: Some(Box::new(p)),
     }
 }
