@@ -41,6 +41,9 @@ services:
     tmpfs:
       - /tmp:size=96m
     environment:
+      # THE POD incoming/api reports (PLAN-3430.01): every POD.workers service says
+      # POD.workers, wherever its image happens to build its sources.
+      APK_POD: POD.workers
       # THE BROKER BY NAME on Broker-Mosquitto's network, as plugin-bridge in
       # DISCOVERY.Engine/Docker/plugin-base.yml does (PLAN-3378.01): the host
       # port is loopback-only, and `broker` is the alias it answers to there.
