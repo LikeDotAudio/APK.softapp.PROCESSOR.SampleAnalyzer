@@ -12,7 +12,7 @@ use crate::amplitude::amplitude_features;
 use crate::distortion::distortion_analysis;
 use crate::envelope::envelope_analysis;
 use crate::family::classify_family;
-use crate::flux::spectral_flux;
+use crate::flux::spectral_flux_of;
 use crate::framestats::centroid_stats;
 use crate::categorize::music_prod_category;
 use crate::label::label_sample;
@@ -177,8 +177,11 @@ fn analyze_core(
     let sustain = sustain_ratio(data, sr);
 
     // Frame-based features: one STFT shared by flux, MFCC, and centroid stats.
-    let frames = crate::stft::stft_mags(data, N_FFT, HOP);
-    let flux = spectral_flux(&frames);
+    // Long files are sampled across their whole length (`Stft`), so the frames'
+    // spacing is `stft.hop`, which may exceed HOP.
+    let stft = crate::stft::stft(data, N_FFT, HOP);
+    let flux = spectral_flux_of(&stft);
+    let frames = stft.frames;
     let mfcc = mfcc_mean(&frames, sr_f, N_FFT);
     let (centroid_mean, centroid_std) = centroid_stats(&frames, sr_f, N_FFT);
 
@@ -200,7 +203,7 @@ fn analyze_core(
     } else {
         crate::peak::Regions::default()
     };
-    let morph = morphology(&frames, sr_f, N_FFT, HOP, &amplitude_track, envelope_rate_hz);
+    let morph = morphology(&frames, sr_f, N_FFT, stft.hop, &amplitude_track, envelope_rate_hz);
     // One pass answers both "how voiced is this" and "is this a vocal".
     let voicing = crate::vad::voice_activity(data, sr);
     let (voicing_ratio, is_vocal) = (voicing.ratio, voicing.is_speech);
@@ -258,7 +261,14 @@ fn analyze_core(
 
     let is_loop = l.group == "Loops/Patterns";
     if bpm == 0.0 && (is_loop || l.timbre == "Loop" || l.length_class == "Loop") {
-        bpm = crate::tempo::estimate_bpm(&frames, sr_f, HOP);
+        // Tempo needs the full analysis-hop resolution; a strided long file
+        // gets its own transform of the first MAX_FRAMES frames instead.
+        bpm = if stft.hop == HOP {
+            crate::tempo::estimate_bpm(&frames, sr_f, HOP)
+        } else {
+            let head = (crate::stft::MAX_FRAMES - 1) * HOP + N_FFT;
+            crate::tempo::estimate_bpm(&crate::stft::stft_mags(&data[..head.min(data.len())], N_FFT, HOP), sr_f, HOP)
+        };
     }
     bpm = bpm.round();
     let mut music_class =
@@ -461,7 +471,7 @@ fn analyze_core(
         // sound; this one describes the ORDER of them and the junctions in
         // between, so it needs every region's own analysis already in place.
         peak.bioacoustic_syntax = crate::syntax::bioacoustic_syntax(
-            &peak.regions, &frames, sr_f, N_FFT, HOP, &amplitude_track, envelope_rate_hz,
+            &peak.regions, &frames, sr_f, N_FFT, stft.hop, &amplitude_track, envelope_rate_hz,
         );
     }
 
