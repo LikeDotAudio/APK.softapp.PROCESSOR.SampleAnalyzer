@@ -50,7 +50,7 @@ engine's `src/` comes from `DEP_EXTRACTOR_ENGINE_SRC_DIR`, which the engine's ow
 publishes (`links = "extractor_engine"`) wherever cargo resolved it.
 
 `Cargo.toml` names the engine by `git = …, rev = …`; the worker (`SRC/Cargo.toml`) names the SDK
-by tag `sdk-v0.5`. Both are patched back to local paths by locally excluded `.cargo/config.toml`
+by tag `sdk-v0.7`. Both are patched back to local paths by locally excluded `.cargo/config.toml`
 files in the monorepo, and by `--config` in `Docker/Dockerfile`.
 
 ## The published record — `schema/peak.schema.json`

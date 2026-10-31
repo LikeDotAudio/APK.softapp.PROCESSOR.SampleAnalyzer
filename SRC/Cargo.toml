@@ -13,7 +13,7 @@
 # ITS OWN WORKSPACE: a worker builds its own image, so a broken worker never
 # fails the plugin build and the reverse.
 #
-# THE SDK BY TAG, like every THICK plugin (`sdk-v0.5`, APK.plugin.SDK): a clone
+# THE SDK BY TAG, like every THICK plugin (`sdk-v0.7`, APK.plugin.SDK): a clone
 # of this repository builds with nothing around it. In the monorepo the locally
 # excluded SRC/.cargo/config.toml patches both names back to the local runner and
 # contracts at the SAME LEXICAL PATHS the engine workspace uses

@@ -6,7 +6,7 @@
 #    compose file beside this one) — BY DESIGN, the same rule as the plugin and
 #    broker images (.apk.scripts/plugin_standalone.py; DATABUS.Broker.MQTT's
 #    Dockerfile): the crates name their siblings by git (the SDK by tag
-#    `sdk-v0.5`, CAPTURE.Extractor-Engine by `rev`), so `git archive HEAD` of
+#    `sdk-v0.7`, CAPTURE.Extractor-Engine by `rev`), so `git archive HEAD` of
 #    this repository builds on its own; THE IMAGE builds the checkout instead,
 #    patching those git names back to the copied local paths with `--config`,
 #    so it never fetches GitHub and ships exactly the runner, contracts and
