@@ -50,6 +50,10 @@ services:
       APK_MQTT_PASSWORD: ${APK_MQTT_PASSWORD:-}
       APK_NODE: ${APK_NODE:-}
       APK_IMAGE_REV: ${APK_IMAGE_REV:-unstamped}
+      # The corpus upload token (owner decision 2026-10-30: set on the bench, in the
+      # secrets envelope as SCAN_UPLOAD_TOKEN). db.rs sends it as X-Upload-Token on
+      # any upload to Scanalyzer-API's upload_peak.php; empty = no header.
+      APK_SCAN_UPLOAD_TOKEN: ${SCAN_UPLOAD_TOKEN:-}
     networks: [default, bus]
     healthcheck:
       # The runner's probe: the timestamp its tick writes into /tmp. The job
