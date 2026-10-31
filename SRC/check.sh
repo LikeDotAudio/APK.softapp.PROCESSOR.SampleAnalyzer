@@ -4,13 +4,13 @@
 #
 # The one check for this repository, run by hand before a push (the monorepo's
 # CI deliberately verifies nothing; see the root .github/workflows header):
-#   ./check.sh            unit + contract tests of both crates
-#   ./check.sh --live     ... then SRC/probe_job.sh against the running worker
+#   SRC/check.sh          unit + contract tests of both crates
+#   SRC/check.sh --live     ... then SRC/probe_job.sh against the running worker
 # Covers: ~90 analyzer tests, the .PEAK schema contract (an analysed record and
 # the worker's bus result both validate against schema/peak.schema.json), the
 # upload allow-list rule, and the worker's job/result/topic tests.
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."     # the stack root (this file is SRC/check.sh: no loose files at the root)
 ( cd SRC/core && cargo test --quiet )   # the analyzer crate
 ( cd SRC && cargo test --quiet )        # the worker
 echo "check.sh: analyzer + worker tests OK"
