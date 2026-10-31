@@ -1,7 +1,7 @@
 //! Two jobs at compile time:
 //!
 //! 1. Bundle the UCS category data. The signed category files in UCS/categories/
-//!    (DATATYPE.soundfx.UCS — located by `ucs_root()`)
+//!    (DATATYPE.soundfx.UCS, the `apk-ucs-bundle` dependency — located by `ucs_root()`)
 //!    are the source of truth; the analyzer used to carry its own stale copy,
 //!    which drifted. We now splice them into one array in OUT_DIR and embed
 //!    that, so the two cannot disagree.
@@ -26,14 +26,11 @@ fn sorted_files(dir: &Path, ext: &str) -> Vec<PathBuf> {
     v
 }
 
-/// Where the UCS bundle (`categories/*.json` + `producer_synonyms.json`) is read from,
-/// first match wins:
-///   1. `APK_UCS_DIR` — an explicit DATATYPE.soundfx.UCS checkout (a standalone clone
-///      of this repository sets it);
-///   2. `DEP_APK_UCS_DIR` — reserved for when DATATYPE.soundfx.UCS ships as a cargo
-///      package with `links` (handoff filed 2026-10-30) and is pinned here by `rev`;
-///   3. the monorepo sibling `../../../../DATATYPE/DATATYPE.soundfx.UCS` (this crate is
-///      PROCESSOR.SampleAnalyzer/SRC/core).
+/// Where the UCS bundle (`categories/*.json` + `producer_synonyms.json`) is read from:
+///   1. `APK_UCS_DIR` — an explicit override (a UCS checkout being edited elsewhere);
+///   2. `DEP_APK_UCS_DIR` — the `apk-ucs-bundle` package (DATATYPE.soundfx.UCS, pinned by
+///      `rev` in Cargo.toml, patched to the sibling folder in the monorepo), whose
+///      `links = "apk_ucs"` build script announces its folder.
 fn ucs_root() -> PathBuf {
     println!("cargo:rerun-if-env-changed=APK_UCS_DIR");
     for var in ["APK_UCS_DIR", "DEP_APK_UCS_DIR"] {
@@ -43,7 +40,7 @@ fn ucs_root() -> PathBuf {
             }
         }
     }
-    PathBuf::from("../../../../DATATYPE/DATATYPE.soundfx.UCS")
+    panic!("DEP_APK_UCS_DIR unset: depend on apk-ucs-bundle (links = \"apk_ucs\") or set APK_UCS_DIR")
 }
 
 /// The extractor engine's `src/`, as cargo resolved the crate (git checkout or local
@@ -66,7 +63,7 @@ fn main() {
     let ucs_dir_path = ucs_dir.as_path();
     assert!(
         ucs_dir_path.is_dir(),
-        "no UCS bundle at {} — set APK_UCS_DIR to a DATATYPE.soundfx.UCS checkout",
+        "no UCS bundle at {} — the apk-ucs-bundle dependency (or APK_UCS_DIR) names no categories/",
         ucs.display()
     );
     let cat_files: Vec<PathBuf> = sorted_files(ucs_dir_path, "json")

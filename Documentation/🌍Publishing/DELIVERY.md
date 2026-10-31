@@ -10,8 +10,7 @@ SRC/check.sh                     # analyzer (85) + worker (12) tests, all passin
 SRC/check.sh --live              # ... plus SRC/probe_job.sh: a probe job answered by the running worker
 ```
 
-A clone builds on its own (Extractor-Engine by `rev`, the SDK by tag `sdk-v0.5`) given
-`APK_UCS_DIR=<a DATATYPE.soundfx.UCS checkout>`. In the monorepo, locally excluded
+A clone builds on its own (Extractor-Engine and the UCS bundle by `rev`, the SDK by tag `sdk-v0.5`). In the monorepo, locally excluded
 `.cargo/config.toml` files patch both back to the local folders, and cargo's target directory
 is the root `target/` (`cargo metadata` says where).
 
@@ -50,3 +49,4 @@ repo's `.rs` files are in that image as files nginx refuses to serve; the root
 - **Spec citations repointed** (S07 handoff) — `ucs.rs` and `morphology.rs` cite the UCS signature spec at its new home, DATATYPE.soundfx.UCS `Documentation/🧩Manual and Artifacts/ucs_signature_spec.md` (comments only; `ANALYZER_VERSION` unchanged).
 - **Kept by design: the `.PEAK` schema is published here, not copied into root `contracts/`** (S07 asked for one there) — the format's owner holds the one schema (`SRC/core/schema/peak.schema.json`, `$id` https://apk.audio/schemas/analyzer-peak/1.1.0) and hands it on through the crate (`oa_sample_analyzer::schema::PEAK_SCHEMA`); a second copy under `contracts/` would be the duplicate this audit removed. contracts can reference it by `$id`. Checking feature names against DATATYPE.soundfx.UCS `signature_vocabulary.json` is a test that belongs with whichever repo owns that vocabulary.
 - **CC-03 no loose files at the stack root** (SDK/contracts audit re-check) — `check.sh` moved to `SRC/check.sh` (it `cd`s to the stack root itself); `naming.sh` no longer lists the stack. Verified: `SRC/check.sh` green.
+- **UCS bundle by commit** (closes the last waiting item) — `SRC/core/Cargo.toml` depends on `apk-ucs-bundle` (DATATYPE.soundfx.UCS, `rev = f838404…`); `build.rs` reads `DEP_APK_UCS_DIR` from its `links = "apk_ucs"` script, with `APK_UCS_DIR` kept as an override and no sibling-folder guess left. Local `.cargo/config.toml` files and `Docker/Dockerfile` (`--config` P4) patch it to the checkout. Verified: `SRC/check.sh` green, `git archive HEAD` builds standalone with no env, worker image `docker build` OK. Note: the worker's `apkaudio-contracts` from tag `sdk-v0.5` (0.1.0) is not patched by the local 0.2.0 (different minor), so it is fetched by tag until the next SDK tag — W01's version policy.

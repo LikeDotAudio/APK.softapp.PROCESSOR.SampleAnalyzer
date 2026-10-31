@@ -25,6 +25,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "apk-ucs-bundle"
+version = "8.2.1-apk.1"
+
+[[package]]
 name = "apk-worker-sample-analyzer"
 version = "0.1.0"
 dependencies = [
@@ -554,6 +558,7 @@ dependencies = [
 name = "oa-sample-analyzer"
 version = "0.1.0"
 dependencies = [
+ "apk-ucs-bundle",
  "ebur128",
  "extractor_engine",
  "hound",

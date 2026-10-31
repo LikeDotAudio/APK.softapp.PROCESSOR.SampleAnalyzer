@@ -18,6 +18,12 @@ lto = true
 serde_json = "1"
 
 [dependencies]
+# The UCS category data (DATATYPE.soundfx.UCS), BY COMMIT. It compiles nothing: its
+# `links = "apk_ucs"` hands build.rs the data folder as DEP_APK_UCS_DIR. A NORMAL
+# dependency, not a build-dependency, because `links` metadata reaches only the
+# build script of a package that depends on the linking package directly. In the
+# monorepo the locally excluded .cargo/config.toml patches it to the sibling folder.
+apk-ucs-bundle = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.soundfx.UCS", rev = "f838404d34f3964400cd04610df8417c7db12779" }
 # The shared cutting DSP — regions.rs delegates region detection here so the stored .PEAK
 # regions and the interactive web Extractor run one implementation (no TS/Rust drift),
 # and `extractor_engine::PeakRegion` is the one definition of a .PEAK region.

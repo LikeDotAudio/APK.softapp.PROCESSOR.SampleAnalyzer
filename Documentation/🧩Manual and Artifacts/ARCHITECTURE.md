@@ -44,8 +44,8 @@ analysed within 5 Hz). The pod is `PODS/POD.workers`.
    digits. When it differs from the last build's (`OUT_DIR/analyzer_version.txt`) the build
    prints a `cargo:warning`. `rerun-if-changed` covers both `src/` trees and the UCS data.
 
-`<ucs>` is `$APK_UCS_DIR`, else `$DEP_APK_UCS_DIR` (reserved for when DATATYPE.soundfx.UCS
-ships as a cargo package), else the sibling `../../DATATYPE/DATATYPE.soundfx.UCS`. The extractor
+`<ucs>` is `$APK_UCS_DIR` (override), else `$DEP_APK_UCS_DIR` from the `apk-ucs-bundle` dependency
+(DATATYPE.soundfx.UCS by `rev`). The extractor
 engine's `src/` comes from `DEP_EXTRACTOR_ENGINE_SRC_DIR`, which the engine's own build script
 publishes (`links = "extractor_engine"`) wherever cargo resolved it.
 
