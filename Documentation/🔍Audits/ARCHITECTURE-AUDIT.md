@@ -24,7 +24,7 @@ The Scanalyzer DSP core: audio file → `.PEAK` feature record (envelope, pitch,
 | Coupling & Cohesion | 2 | Builds alone (engine by `rev`, SDK by tag) given `APK_UCS_DIR`; the UCS bundle is still located, not versioned (handoff). The image's repo-root context is the house rule (kept by design). |
 | Boundary Integrity | 3 | Decoders and HTTP upload sit behind `Decoders/` and `Encoders/db.rs`; the bus result is the published `.PEAK` schema, versioned and tested. |
 | Duplication Control | 3 | One analyzer for CLI/Tauri/WASM/worker; one region definition; the upload trim follows the endpoint's one column file. The worker's second MQTT session is deliberate (kept by design). |
-| Testing & Contracts | 3 | `./check.sh` (97 tests incl. schema contract tests for the record and the worker result); `SRC/probe_job.sh` asks the live worker. |
+| Testing & Contracts | 3 | `SRC/check.sh` (97 tests incl. schema contract tests for the record and the worker result); `SRC/probe_job.sh` asks the live worker. |
 | Change management | 3 | `ANALYZER_VERSION` (re-analysis) and `schema_version` (format) are separate, both stamped; SDK by tag, engine by rev. |
 
 Score key: 3 meets the standard · 2 minor gaps · 1 significant gaps · 0 absent / violated.

@@ -83,8 +83,8 @@ The worker links `apk-plugin-runner` and `apkaudio-contracts` from APK.plugin.SD
 ### Build and test
 ```bash
 (cd SRC/core && cargo build --release)   # → <target>/release/oa_sample_analyzer
-./check.sh                     # both crates' tests (analyzer + worker, incl. the .PEAK schema contract)
-./check.sh --live              # ... plus SRC/probe_job.sh against the running worker
+SRC/check.sh                     # both crates' tests (analyzer + worker, incl. the .PEAK schema contract)
+SRC/check.sh --live              # ... plus SRC/probe_job.sh against the running worker
 ```
 
 ### The `.PEAK` record is a published format
