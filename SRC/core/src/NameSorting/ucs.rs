@@ -1,4 +1,5 @@
-//! UCS classification — the implementation of Documentation/ucs_signature_spec.md.
+//! UCS classification — the implementation of DATATYPE.soundfx.UCS
+//! `Documentation/🧩Manual and Artifacts/ucs_signature_spec.md`.
 //!
 //! The previous version of this module hardcoded `let cat = "MUSICAL"` and could
 //! therefore only ever emit one of the 82 categories. It also never looked at the

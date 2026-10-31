@@ -1,4 +1,5 @@
-//! Morphology features — the "proposed" set of `ucs_signature_spec.md` §4b.
+//! Morphology features — the "proposed" set of `ucs_signature_spec.md` §4b
+//! (DATATYPE.soundfx.UCS `Documentation/🧩Manual and Artifacts/ucs_signature_spec.md`).
 //!
 //! These exist because the UCS signatures ask for them: 329 priors reference
 //! `stationarity`, 202 `decay_time_seconds_60db`, 148 `voicing_ratio`. Until now
