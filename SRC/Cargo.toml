@@ -26,6 +26,9 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
+# The analyzer crate in core/ is its own root (its own Cargo.lock and release
+# profile): a path dependency of this worker, not a member of its workspace.
+exclude = ["core"]
 
 [lib]
 name = "apk_worker_sample_analyzer"
@@ -34,7 +37,7 @@ path = "src/lib.rs"
 [dependencies]
 apk-plugin-runner = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.5" }
 apkaudio-contracts = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.5" }
-oa-sample-analyzer = { path = ".." }
+oa-sample-analyzer = { path = "core" }
 base64 = "0.22"
 rumqttc = "0.24"
 serde_json = "1"

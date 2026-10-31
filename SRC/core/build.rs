@@ -32,7 +32,8 @@ fn sorted_files(dir: &Path, ext: &str) -> Vec<PathBuf> {
 ///      of this repository sets it);
 ///   2. `DEP_APK_UCS_DIR` — reserved for when DATATYPE.soundfx.UCS ships as a cargo
 ///      package with `links` (handoff filed 2026-10-30) and is pinned here by `rev`;
-///   3. the monorepo sibling `../../DATATYPE/DATATYPE.soundfx.UCS`.
+///   3. the monorepo sibling `../../../../DATATYPE/DATATYPE.soundfx.UCS` (this crate is
+///      PROCESSOR.SampleAnalyzer/SRC/core).
 fn ucs_root() -> PathBuf {
     println!("cargo:rerun-if-env-changed=APK_UCS_DIR");
     for var in ["APK_UCS_DIR", "DEP_APK_UCS_DIR"] {
@@ -42,7 +43,7 @@ fn ucs_root() -> PathBuf {
             }
         }
     }
-    PathBuf::from("../../DATATYPE/DATATYPE.soundfx.UCS")
+    PathBuf::from("../../../../DATATYPE/DATATYPE.soundfx.UCS")
 }
 
 /// The extractor engine's `src/`, as cargo resolved the crate (git checkout or local

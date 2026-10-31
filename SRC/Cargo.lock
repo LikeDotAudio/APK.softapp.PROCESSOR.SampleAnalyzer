@@ -17,9 +17,8 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 [[package]]
 name = "apk-plugin-runner"
 version = "0.1.0"
-source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v0.5#f887018ae4a51b879ffec8b3c12d7984a5f057c0"
 dependencies = [
- "apkaudio-contracts",
+ "apkaudio-contracts 0.2.0",
  "libc",
  "rumqttc",
  "serde_json",
@@ -30,7 +29,7 @@ name = "apk-worker-sample-analyzer"
 version = "0.1.0"
 dependencies = [
  "apk-plugin-runner",
- "apkaudio-contracts",
+ "apkaudio-contracts 0.1.0",
  "base64",
  "oa-sample-analyzer",
  "rumqttc",
@@ -41,6 +40,15 @@ dependencies = [
 name = "apkaudio-contracts"
 version = "0.1.0"
 source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v0.5#f887018ae4a51b879ffec8b3c12d7984a5f057c0"
+dependencies = [
+ "regress",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "apkaudio-contracts"
+version = "0.2.0"
 dependencies = [
  "regress",
  "serde",

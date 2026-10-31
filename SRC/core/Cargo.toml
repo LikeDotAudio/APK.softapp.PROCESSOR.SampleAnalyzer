@@ -36,3 +36,7 @@ ebur128 = "0.1"
 symphonia = { version = "0.5", features = ["mp3", "flac", "aiff", "isomp4", "aac", "alac", "ogg", "vorbis", "wav", "pcm"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ureq = { version = "2.9", features = ["json"] }
+
+# Its own workspace root: the worker manifest one folder up (SRC/Cargo.toml) is
+# another, and this crate is excluded from it.
+[workspace]
