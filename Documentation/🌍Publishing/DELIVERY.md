@@ -18,7 +18,7 @@ is the root `target/` (`cargo metadata` says where).
 
 | Form | Built by | Lands |
 |---|---|---|
-| WASM, inside the Scanalyzer web app | The APK.audio monorepo `.github/workflows/ci.yml` step "Build the Scanalyzer" (`wasm-pack build wasm_analyzer --target web --release`, then `vite build`) on every push | https://apk.audio/APK:Softapps/SCANALYZER_SUITE/SCANALYZER.Like.audio/Web_Front/dist/ (FTPS, `WEB.Frontend-Assets/.apk.scripts/deploy.py`); Scanalyzer's own public home is https://scanalyzer.like.audio |
+| WASM, inside the Scanalyzer web app | The APK.audio monorepo `.github/workflows/ci.yml` step "Build the Scanalyzer" (`wasm-pack build wasm_analyzer --target web --release`, then `vite build`) on every push | https://apk.audio/APK:Softapps/SCANALYZER_SUITE/SCANALYZER.Like.audio/Web_Front/dist/ (FTPS, `.apk.scripts/deploy.py (root)`); Scanalyzer's own public home is https://scanalyzer.like.audio |
 | Native, inside the Scanalyzer desktop app | `npm run tauri build` in Scanalyzer's `Web_Front` (path dependency) | The operator's machine |
 | The `oa_sample_analyzer` CLI | `cargo build --release` by hand, or Scanalyzer's `main.py` | The operator's machine; the desktop app finds it by `SCAN_ANALYZER_BIN` |
 | The worker `apk-worker-sample-analyzer` (`SRC/`) | `Docker/Dockerfile`, context the repo root by design (it copies contracts, the runner, CAPTURE.Extractor-Engine and the UCS categories beside this crate, and patches the git names to them with `--config`, so the image never fetches GitHub); `cargo build --release --locked` | the **Worker-SAMPLE_ANALYZER** container (`worker-sample-analyzer:local`, project `workers`, no port); after an edit, `docker compose -f PODS/POD.workers/Docker/docker-compose.yml up -d --build sample-analyzer` |
