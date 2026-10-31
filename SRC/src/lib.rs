@@ -227,26 +227,47 @@ pub fn run_job_agent(host: &str, port: u16) {
     }
 
     let (client, mut connection) = Client::new(options, 32);
+    // The job runs on a thread of its own, never on this one: rumqttc only
+    // pings while `connection` is polled, and a job that held this loop past
+    // 1.5x the keep-alive had the broker drop the session mid-job
+    // (LOOSE-worker-keepalive-long-job).
+    let answers = client.clone();
+    let result_leaf = result_topic.clone();
+    let lane = JobLane::start(
+        move |payload| handle_job(payload, limits),
+        move |answer| {
+            println!(
+                "🧰 [{MODULE}] job {} → ok={} {} ({} ms)",
+                answer["job_id"],
+                answer["ok"],
+                answer["result"]["metadata"]["name"],
+                answer["elapsed_ms"]
+            );
+            // Blocking is fine here: the event loop drains the request queue.
+            let _ = answers.publish(result_leaf.clone(), QoS::AtLeastOnce, retain, answer.to_string());
+        },
+    );
     println!("🧰 [{MODULE}] worker listening on {job_topic}, answering on {result_topic}");
     for event in connection.iter() {
-        // Every event, ping responses included, is progress.
+        // Every event, ping responses included, is progress — and with the
+        // job off this thread, pings keep coming however long the job runs.
         apk_plugin_runner::tick();
         match event {
             Ok(Event::Incoming(Packet::ConnAck(_))) => {
                 let _ = client.try_subscribe(job_topic.clone(), QoS::AtLeastOnce);
             }
-            Ok(Event::Incoming(Packet::Publish(p))) if p.topic == job_topic => {
-                let answer = handle_job(&p.payload, limits);
-                println!(
-                    "🧰 [{MODULE}] job {} → ok={} {} ({} ms)",
-                    answer["job_id"],
-                    answer["ok"],
-                    answer["result"]["metadata"]["name"],
-                    answer["elapsed_ms"]
-                );
-                apk_plugin_runner::tick();
-                let _ = client.try_publish(result_topic.clone(), QoS::AtLeastOnce, retain, answer.to_string());
-            }
+            Ok(Event::Incoming(Packet::Publish(p))) if p.topic == job_topic => match lane.offer(p.payload.to_vec()) {
+                Ok(()) => {}
+                Err(Refused::Busy(answer)) => {
+                    let _ = client.try_publish(result_topic.clone(), QoS::AtLeastOnce, retain, answer.to_string());
+                }
+                Err(Refused::Gone) => {
+                    // The job thread died (a panic in a decoder): return, and
+                    // the runner exits the process so Docker restarts it.
+                    eprintln!("⚠️ [{MODULE}] the job thread is gone; exiting");
+                    return;
+                }
+            },
             Ok(_) => {}
             Err(e) => {
                 eprintln!("⚠️ [{MODULE}] broker session: {e}; retrying");
@@ -254,6 +275,64 @@ pub fn run_job_agent(host: &str, port: u16) {
             }
         }
     }
+}
+
+/// Jobs that may wait behind the one running before a new one is refused.
+pub const JOB_QUEUE: usize = 4;
+
+/// Why [`JobLane::offer`] did not take a job.
+#[derive(Debug)]
+pub enum Refused {
+    /// [`JOB_QUEUE`] jobs already wait: the answer to send now, under the
+    /// job's own `job_id` when it had one, so the caller is not left waiting.
+    Busy(Value),
+    /// The job thread has ended.
+    Gone,
+}
+
+/// One thread that runs jobs in turn, fed without ever blocking the feeder.
+pub struct JobLane {
+    jobs: std::sync::mpsc::SyncSender<Vec<u8>>,
+}
+
+impl JobLane {
+    /// Start the job thread: each job goes through `run`, and its answer to
+    /// `answer`, one at a time in arrival order.
+    pub fn start(
+        run: impl Fn(&[u8]) -> Value + Send + 'static,
+        answer: impl Fn(Value) + Send + 'static,
+    ) -> Self {
+        let (jobs, queue) = std::sync::mpsc::sync_channel::<Vec<u8>>(JOB_QUEUE);
+        std::thread::Builder::new()
+            .name(format!("{MODULE}-job"))
+            .spawn(move || {
+                for payload in queue {
+                    answer(run(&payload));
+                }
+            })
+            .expect("the job thread starts");
+        JobLane { jobs }
+    }
+
+    /// Hand a job to the job thread. Returns at once, whatever is running.
+    pub fn offer(&self, payload: Vec<u8>) -> Result<(), Refused> {
+        use std::sync::mpsc::TrySendError;
+        match self.jobs.try_send(payload) {
+            Ok(()) => Ok(()),
+            Err(TrySendError::Full(payload)) => Err(Refused::Busy(busy(&payload))),
+            Err(TrySendError::Disconnected(_)) => Err(Refused::Gone),
+        }
+    }
+}
+
+/// The answer to a job refused because the queue is full.
+fn busy(payload: &[u8]) -> Value {
+    let started = Instant::now();
+    let job_id = serde_json::from_slice::<Value>(payload)
+        .ok()
+        .and_then(|job| job.get("job_id").filter(|id| id.as_str().is_some_and(|s| !s.is_empty())).cloned())
+        .unwrap_or(Value::Null);
+    failure(job_id, &format!("the worker is busy ({JOB_QUEUE} jobs already wait); send the job again later"), started)
 }
 
 #[cfg(test)]
@@ -365,5 +444,50 @@ mod tests {
         let (result, retain) = baremetal_io::module_result(MODULE).unwrap();
         assert_eq!(result, "APK.audio/System/Protocols/sample_analyzer/incoming/result");
         assert!(!retain);
+    }
+
+    #[test]
+    fn a_long_job_never_holds_up_the_feeder() {
+        let (done_tx, done_rx) = std::sync::mpsc::channel();
+        let (running_tx, running_rx) = std::sync::mpsc::channel();
+        let lane = JobLane::start(
+            move |payload| {
+                let _ = running_tx.send(());
+                std::thread::sleep(Duration::from_millis(400));
+                json!({ "job_id": String::from_utf8_lossy(payload) })
+            },
+            move |answer| done_tx.send(answer).unwrap(),
+        );
+        lane.offer(b"j0".to_vec()).expect("queued");
+        running_rx.recv_timeout(Duration::from_secs(5)).expect("the job started");
+        let t = Instant::now();
+        // One running, JOB_QUEUE waiting, one more refused — all at once.
+        for i in 1..=JOB_QUEUE {
+            lane.offer(format!("j{i}").into_bytes()).expect("queued");
+        }
+        let refused = lane.offer(br#"{"job_id":"late"}"#.to_vec());
+        assert!(t.elapsed() < Duration::from_millis(200), "offer waited on the job: {:?}", t.elapsed());
+        match refused {
+            Err(Refused::Busy(a)) => {
+                assert_eq!(a["job_id"], "late");
+                assert_eq!(a["ok"], false);
+            }
+            other => panic!("expected busy, got {other:?}"),
+        }
+        assert_eq!(done_rx.recv_timeout(Duration::from_secs(5)).unwrap()["job_id"], "j0");
+    }
+
+    #[test]
+    fn a_dead_job_thread_is_reported_not_hidden() {
+        let lane = JobLane::start(|_| panic!("decoder blew up"), |_| {});
+        lane.offer(b"x".to_vec()).expect("first is queued");
+        let t = Instant::now();
+        loop {
+            if let Err(Refused::Gone) = lane.offer(b"x".to_vec()) {
+                break;
+            }
+            assert!(t.elapsed() < Duration::from_secs(5), "never saw the thread go");
+            std::thread::sleep(Duration::from_millis(10));
+        }
     }
 }
