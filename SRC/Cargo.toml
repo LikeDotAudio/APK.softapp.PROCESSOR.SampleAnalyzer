@@ -35,8 +35,8 @@ name = "apk_worker_sample_analyzer"
 path = "src/lib.rs"
 
 [dependencies]
-apk-plugin-runner = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.6" }
-apkaudio-contracts = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.6" }
+apk-plugin-runner = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.7" }
+apkaudio-contracts = { git = "https://github.com/LikeDotAudio/APK.plugin.SDK", tag = "sdk-v0.7" }
 oa-sample-analyzer = { path = "core" }
 base64 = "0.22"
 rumqttc = "0.24"
