@@ -85,7 +85,7 @@ cargo build --release          # → target/release/oa_sample_analyzer
 ```
 
 ### The `.PEAK` record is a published format
-[`schema/peak.schema.json`](schema/peak.schema.json) is the contract every reader holds (the Scanalyzer front end, the corpus API, clients of the worker's `incoming/result`). Its version is `metadata.schema_version` (`PEAK_SCHEMA_VERSION` in `src/Core/schema.rs`); it moves only when a field is renamed, removed or retyped. `metadata.analyzer_version` stays what it was: "does this record need re-analysis". `oa_sample_analyzer::schema::{PEAK_SCHEMA, validate}` hand the schema and a checker to any crate that links this one; tests hold an analysed record and the worker's result to it.
+[`schema/peak.schema.json`](schema/peak.schema.json) (`analyzer-peak` 1.1.0, strict: `additionalProperties: false` at every level) is the contract every reader holds — the Scanalyzer front end, the corpus API, clients of the worker's `incoming/result`. It moved here from Scanalyzer's `Web_Front/src/analyzerPeakSchema.json` (2026-10-30): the format's owner keeps its schema. Every record declares itself: `metadata.format` = `analyzer-peak`, `metadata.schema_version` = the shape's semver (`PEAK_FORMAT` / `PEAK_SCHEMA_VERSION` in `src/Core/schema.rs`), which moves when a field is added, renamed or dropped. `metadata.analyzer_version` stays what it was: "does this record need re-analysis". `oa_sample_analyzer::schema::{PEAK_SCHEMA, validate}` hand the schema and a checker to any crate that links this one; tests hold an analysed record and the worker's result to it.
 
 ### CLI
 ```

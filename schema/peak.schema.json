@@ -1,89 +1,1157 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/LikeDotAudio/APK.softapp.PROCESSOR.SampleAnalyzer/schema/peak.schema.json",
-  "title": ".PEAK record",
-  "description": "One analysed audio file, as oa_sample_analyzer writes it: the per-file sidecar, one element of sample_cloud_data.PEAK, and the `result` of a Worker-SAMPLE_ANALYZER job (sample_analyzer/incoming/result). Owned by PROCESSOR.SampleAnalyzer (src/Core/peak.rs). `metadata.schema_version` is THIS document's version: it moves only when a field is renamed, removed or changes type; adding a field does not move it. `metadata.analyzer_version` is a different thing — a hash of the analyzer's inputs that says whether a record must be re-analysed. A record with no schema_version (0) predates this schema and is read leniently. Region fields are extractor_engine::PeakRegion (CAPTURE.Extractor-Engine), the one definition shared with the Extractor.",
-  "x-schema-version": 1,
-  "type": "object",
-  "required": ["metadata", "classification", "envelope", "spectral_features", "musicality", "unsupervised", "ucs"],
-  "properties": {
-    "metadata": {
-      "type": "object",
-      "required": ["analyzer_version", "name", "folder", "sub", "path", "length_seconds", "sample_rate", "bit_depth", "channels", "source_format", "lossy_source", "dc_offset", "trailing_silence_ms"],
-      "properties": {
-        "schema_version": {"type": "integer", "minimum": 0},
-        "analyzer_version": {"type": "string"},
-        "name": {"type": "string"},
-        "folder": {"type": "string"},
-        "sub": {"type": "string"},
-        "path": {"type": "string"},
-        "length_seconds": {"type": "number"},
-        "sample_rate": {"type": "integer", "minimum": 0},
-        "bit_depth": {"type": "integer", "minimum": 0},
-        "channels": {"type": "integer", "minimum": 0},
-        "source_format": {"type": "string"},
-        "lossy_source": {"type": "boolean"},
-        "dc_offset": {"type": "number"},
-        "trailing_silence_ms": {"type": "number"},
-        "analysis_depth": {"type": "string"}
-      }
+  "$id": "https://apk.audio/schemas/analyzer-peak/1.1.0",
+  "title": "analyzer-peak — the Scanalyzer analyzer's .PEAK, in both of its shapes",
+  "description": "The record oa_sample_analyzer writes: one per audio file by `Encoders/sidecar.rs::write_sidecar` (an OBJECT, `<sample>.PEAK`) and all of them together by `Pipeline/run.rs` (an ARRAY, `sample_cloud_data.PEAK`), and the `result` of a Worker-SAMPLE_ANALYZER job (sample_analyzer/incoming/result, the OBJECT). OWNED HERE, by PROCESSOR.SampleAnalyzer (`schema/peak.schema.json`, compiled in as `oa_sample_analyzer::schema::PEAK_SCHEMA`); it lived in SCANALYZER.Like.audio as `Web_Front/src/analyzerPeakSchema.json` until the 2026-10-30 audit moved it to the format's owner, and readers there now take it through the crate. `metadata.format` = `schema::PEAK_FORMAT`, `metadata.schema_version` = `schema::PEAK_SCHEMA_VERSION` (the semver in the $id). Tests: an analysed record and the worker's result validate (`src/Core/schema.rs`, `SRC/src/lib.rs`); Scanalyzer's `wasm_analyzer` validates every tracked `.PEAK` it reads. Originally written off the 147 tracked `.PEAK` (346 records) of 2026-09-09 — PLAN-907.01. The extension `.PEAK` names four documents and this schema types two of them; the discriminator table is in `$comment`.",
+  "$comment": "WHAT `.PEAK` MEANS, PER WRITER. The extension is borrowed: it began life as a Pro Tools WAVEFORM PEAK CACHE, and 856 of those were untracked from this repository in August 2026. Nothing here is a waveform cache, and only ONE of the four carries waveform peaks at all — this one, base64 in `preview.peak_data_base64`.\n\n  1. analyzer per-file sidecar   OBJECT, this schema. Discriminator: `metadata.analyzer_version`. 144 tracked.\n  2. analyzer aggregate / cloud  ARRAY of (1), this schema. Discriminator: a JSON array whose first element is (1). 3 tracked: two `sample_cloud_data.PEAK` and one `samples.PEAK`, 202 records between them. This is the corpus `peakSchema.ts` exists to read; it is not a fossil.\n  3. peak-lens-sidecar          OBJECT, `lensPeakSidecarSchema.json` in SCANALYZER.Like.audio `Web_Front/src/`. Discriminator: `format: \"peak-lens-sidecar\"`. Downloaded by a visitor; never tracked.\n  4. extract_note_root_beat_map.py's write   OBJECT. NOT A FOURTH FORMAT — it is (1) with 2 of its 10 groups, written to (1)'s own path, and the one thing it adds (`musicality.note_root_key_beat_marker_map`) is a field (1) already carries in 164 of 346 records because `Scananalyzers/Musical/note_map.rs` is a port of that same CLI. Never tracked.\n\nTWO GROUP NAMES COLLIDE ACROSS (1) AND (3) WITH ZERO FIELDS IN COMMON. `musicality` here is {pitch_hz, root_note_name, root_frequency_hz, root_cents_offset, beats_per_minute, root_midi_note, chromagram, ...}; in the lens sidecar it is {key, keyConfidence, pitchHz, centsOffset, bpm}. `ucs` here is {category, subcategory, id, confidence, alternatives, synonyms, reason}; there it is {cat_key, creator_id, source_id}. A reader that branches on a group NAME gets the wrong document with no error. That is why the discriminator is `metadata.analyzer_version` and not a group.\n\nTHERE IS NOW A `format` FIELD, AND THE TRACKED CORPUS DOES NOT CARRY IT YET. `peak::Metadata` gained `format` and `schema_version` on 2026-09-10 (PLAN-1070.01), so everything the analyzer writes from now on declares itself: `analyzer-peak`, and the semver in the $id above. The 147 tracked `.PEAK` predate that and read back with both fields EMPTY, deliberately — `#[serde(default)]` hands them the empty string rather than the constant, because a record must not come back claiming a declaration it never made. That is why both keys are OPTIONAL here and their `enum` admits the empty string: the migration is a re-scan of `SAMPLE and PLAY/SampleLibrary/` with the release binary and one commit of 147 regenerated files, and when that lands the empty string comes out of both enums and both keys join `required`. Until then a reader that finds neither key falls back to the discriminator it always had — the `metadata` group's PRESENCE — which is what the two readers still branch on.\n\nSTRICTNESS IS THE POINT. `additionalProperties: false` with a complete `required` at every level is what turns a field added, renamed or dropped in `Core/peak.rs` into a red lane instead of a silent shape change — the same instrument `perfSchema.json` uses, and the omission `peakSchema.ts` is 115 lines of aftermath from. `required` here means PRESENT IN ALL 346 RECORDS; a key absent from some is optional because older records predate it (`analysis_depth`, `preview`, `envelope.slices`: 226; `true_peak_dbtp`, `loudness_range_lu`, `note_root_key_beat_marker_map`: 164; `bioacoustic_syntax`: 18).",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/record",
+      "$comment": "The per-file sidecar."
     },
-    "classification": {
+    {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/record"
+      },
+      "$comment": "The aggregate cloud file."
+    }
+  ],
+  "$defs": {
+    "record": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "envelope",
+        "metadata",
+        "musicality",
+        "regions",
+        "spectral_features",
+        "ucs",
+        "unsupervised"
+      ],
       "properties": {
-        "group": {"type": "string"},
-        "subgroup": {"type": "string"},
-        "timbre": {"type": "string"},
-        "length_class": {"type": "string"},
-        "reason": {"type": "array", "items": {"type": "string"}},
-        "audit": {"type": "boolean"},
-        "acoustic_types": {"type": "array", "items": {"type": "string"}},
-        "sound_design_roles": {"type": "array", "items": {"type": "string"}},
-        "instrument_family": {"type": "array", "items": {"type": "string"}}
-      }
-    },
-    "envelope": {"type": "object"},
-    "spectral_features": {"type": "object"},
-    "musicality": {"type": "object"},
-    "unsupervised": {"type": "object"},
-    "ucs": {
-      "type": "object",
-      "properties": {
-        "category": {"type": "string"},
-        "subcategory": {"type": "string"},
-        "id": {"type": "string"},
-        "confidence": {"type": "number"},
-        "alternatives": {"type": "array", "items": {"type": "object"}},
-        "synonyms": {"type": "array", "items": {"type": "string"}},
-        "reason": {"type": "string"}
-      }
-    },
-    "regions": {
-      "type": "object",
-      "properties": {
-        "count": {"type": "integer", "minimum": 0},
-        "detection_threshold_decibels": {"type": "number"},
-        "minimum_silence_seconds": {"type": "number"},
-        "minimum_region_seconds": {"type": "number"},
+        "bioacoustic_syntax": {
+          "description": "Sequence analysis over the envelope slices — repertoire, transitions and junctions. Present on 18 records; produced only for files the syntax analyzer ran on.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "bigram_coverage",
+            "bound_ratio",
+            "determinism",
+            "distinct_bigrams",
+            "dominant_junction_class",
+            "dominant_motif",
+            "dominant_motif_occurrences",
+            "gap_regularity",
+            "junction_profile",
+            "junctions",
+            "median_gap_seconds",
+            "reason",
+            "repeat_ratio",
+            "repertoire_entropy_bits",
+            "repertoire_entropy_normalized",
+            "sequence",
+            "slice_count",
+            "slice_types",
+            "slices",
+            "syntactic_information_bits",
+            "syntax_class",
+            "transition_entropy_bits",
+            "transitions",
+            "transitions_per_type_pair",
+            "type_count"
+          ],
+          "properties": {
+            "bigram_coverage": {
+              "type": "number"
+            },
+            "bound_ratio": {
+              "type": "number"
+            },
+            "determinism": {
+              "type": "number"
+            },
+            "distinct_bigrams": {
+              "type": "integer"
+            },
+            "dominant_junction_class": {
+              "type": "string"
+            },
+            "dominant_motif": {
+              "type": "string"
+            },
+            "dominant_motif_occurrences": {
+              "type": "integer"
+            },
+            "gap_regularity": {
+              "type": "number"
+            },
+            "junction_profile": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "count",
+                  "junction_class"
+                ],
+                "properties": {
+                  "count": {
+                    "type": "integer"
+                  },
+                  "junction_class": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "junctions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "from_label",
+                  "from_region_index",
+                  "gap_level_above_noise_floor_decibels",
+                  "gap_level_below_previous_peak_decibels",
+                  "gap_root_mean_square_level",
+                  "gap_seconds",
+                  "gap_slope_decibels_per_second",
+                  "gap_spectral_centroid_hz",
+                  "gap_spectral_flatness",
+                  "index",
+                  "inter_onset_seconds",
+                  "junction_class",
+                  "surprisal_bits",
+                  "to_label",
+                  "to_region_index",
+                  "transition_probability"
+                ],
+                "properties": {
+                  "from_label": {
+                    "type": "string"
+                  },
+                  "from_region_index": {
+                    "type": "integer"
+                  },
+                  "gap_level_above_noise_floor_decibels": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "description": "null when the gap is digital silence (no level to measure)."
+                  },
+                  "gap_level_below_previous_peak_decibels": {
+                    "type": "number"
+                  },
+                  "gap_root_mean_square_level": {
+                    "type": "number"
+                  },
+                  "gap_seconds": {
+                    "type": "number"
+                  },
+                  "gap_slope_decibels_per_second": {
+                    "type": "number"
+                  },
+                  "gap_spectral_centroid_hz": {
+                    "type": "number"
+                  },
+                  "gap_spectral_flatness": {
+                    "type": "number"
+                  },
+                  "index": {
+                    "type": "integer"
+                  },
+                  "inter_onset_seconds": {
+                    "type": "number"
+                  },
+                  "junction_class": {
+                    "type": "string"
+                  },
+                  "surprisal_bits": {
+                    "type": "number"
+                  },
+                  "to_label": {
+                    "type": "string"
+                  },
+                  "to_region_index": {
+                    "type": "integer"
+                  },
+                  "transition_probability": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "median_gap_seconds": {
+              "type": "number"
+            },
+            "reason": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "repeat_ratio": {
+              "type": "number"
+            },
+            "repertoire_entropy_bits": {
+              "type": "number"
+            },
+            "repertoire_entropy_normalized": {
+              "type": "number"
+            },
+            "sequence": {
+              "type": "string"
+            },
+            "slice_count": {
+              "type": "integer"
+            },
+            "slice_types": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "descriptor",
+                  "exemplar_region_index",
+                  "label",
+                  "mean_duration_seconds",
+                  "mean_harmonicity",
+                  "mean_spectral_centroid_hz",
+                  "occurrences",
+                  "share"
+                ],
+                "properties": {
+                  "descriptor": {
+                    "type": "string"
+                  },
+                  "exemplar_region_index": {
+                    "type": "integer"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "mean_duration_seconds": {
+                    "type": "number"
+                  },
+                  "mean_harmonicity": {
+                    "type": "number"
+                  },
+                  "mean_spectral_centroid_hz": {
+                    "type": "number"
+                  },
+                  "occurrences": {
+                    "type": "integer"
+                  },
+                  "share": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "slices": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "duration_seconds",
+                  "embedding_x",
+                  "embedding_y",
+                  "region_index",
+                  "start_seconds",
+                  "type_label"
+                ],
+                "properties": {
+                  "duration_seconds": {
+                    "type": "number"
+                  },
+                  "embedding_x": {
+                    "type": "number"
+                  },
+                  "embedding_y": {
+                    "type": "number"
+                  },
+                  "region_index": {
+                    "type": "integer"
+                  },
+                  "start_seconds": {
+                    "type": "number"
+                  },
+                  "type_label": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "syntactic_information_bits": {
+              "type": "number"
+            },
+            "syntax_class": {
+              "type": "string"
+            },
+            "transition_entropy_bits": {
+              "type": "number"
+            },
+            "transitions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "count",
+                  "from_label",
+                  "mean_gap_seconds",
+                  "mean_inter_onset_seconds",
+                  "probability",
+                  "to_label"
+                ],
+                "properties": {
+                  "count": {
+                    "type": "integer"
+                  },
+                  "from_label": {
+                    "type": "string"
+                  },
+                  "mean_gap_seconds": {
+                    "type": "number"
+                  },
+                  "mean_inter_onset_seconds": {
+                    "type": "number"
+                  },
+                  "probability": {
+                    "type": "number"
+                  },
+                  "to_label": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "transitions_per_type_pair": {
+              "type": "number"
+            },
+            "type_count": {
+              "type": "integer"
+            },
+            "type_separation": {
+              "type": "number"
+            }
+          }
+        },
+        "classification": {
+          "description": "The house taxonomy — group/subgroup/timbre and the reasons behind them. Not UCS; that is the `ucs` group.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "acoustic_types",
+            "audit",
+            "group",
+            "instrument_family",
+            "length_class",
+            "reason",
+            "sound_design_roles",
+            "subgroup",
+            "timbre"
+          ],
+          "properties": {
+            "acoustic_types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "audit": {
+              "type": "boolean"
+            },
+            "group": {
+              "type": "string"
+            },
+            "instrument_family": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "length_class": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sound_design_roles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "subgroup": {
+              "type": "string"
+            },
+            "timbre": {
+              "type": "string"
+            }
+          }
+        },
+        "envelope": {
+          "description": "File-level ADSR plus, since `slices`, one measured ADSR per transient. The file-level scalars are `null` when a multi-event file has no single envelope to measure; `slices` is where a per-event answer is valid by construction.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attack_seconds",
+            "decay_time_seconds_60db",
+            "envelope_attack_seconds",
+            "envelope_decay_seconds",
+            "envelope_kurtosis",
+            "envelope_release_seconds",
+            "envelope_shape",
+            "envelope_skewness",
+            "envelope_sustain_level",
+            "envelope_temporal_centroid",
+            "onset_periodicity",
+            "onset_rate_per_second",
+            "sustain_ratio",
+            "sustained",
+            "transient_count"
+          ],
+          "properties": {
+            "attack_seconds": {
+              "type": "number"
+            },
+            "decay_time_seconds_60db": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "envelope_attack_seconds": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "envelope_decay_seconds": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "envelope_kurtosis": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "envelope_release_seconds": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "envelope_shape": {
+              "type": "string"
+            },
+            "envelope_skewness": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "envelope_sustain_level": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "envelope_temporal_centroid": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "onset_periodicity": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "onset_rate_per_second": {
+              "type": "number"
+            },
+            "slices": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "decay_time_seconds_60db",
+                  "end_seconds",
+                  "envelope_attack_seconds",
+                  "envelope_decay_seconds",
+                  "envelope_kurtosis",
+                  "envelope_release_seconds",
+                  "envelope_shape",
+                  "envelope_skewness",
+                  "envelope_sustain_level",
+                  "envelope_temporal_centroid",
+                  "index",
+                  "relative_level",
+                  "start_seconds"
+                ],
+                "properties": {
+                  "decay_time_seconds_60db": {
+                    "type": [
+                      "null",
+                      "number"
+                    ]
+                  },
+                  "end_seconds": {
+                    "type": "number"
+                  },
+                  "envelope_attack_seconds": {
+                    "type": "number"
+                  },
+                  "envelope_decay_seconds": {
+                    "type": "number"
+                  },
+                  "envelope_kurtosis": {
+                    "type": "number"
+                  },
+                  "envelope_release_seconds": {
+                    "type": "number"
+                  },
+                  "envelope_shape": {
+                    "type": "string"
+                  },
+                  "envelope_skewness": {
+                    "type": "number"
+                  },
+                  "envelope_sustain_level": {
+                    "type": "number"
+                  },
+                  "envelope_temporal_centroid": {
+                    "type": "number"
+                  },
+                  "index": {
+                    "type": "integer"
+                  },
+                  "relative_level": {
+                    "type": "number"
+                  },
+                  "start_seconds": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "sustain_ratio": {
+              "type": "number"
+            },
+            "sustained": {
+              "type": "boolean"
+            },
+            "transient_count": {
+              "type": "integer"
+            }
+          }
+        },
+        "metadata": {
+          "description": "Identity and container facts. `format` and `schema_version` are the format's own declaration — empty on every record written before 2026-09-10, non-empty on everything written since. `analyzer_version` is the discriminator this format had BEFORE those two AND the cache key — `sidecar.rs::read_sidecar` re-analyzes any sidecar whose version differs from the running binary, which is why a widened record invalidates the corpus automatically. `analysis_depth` is \"full\" or \"preview_only\"; absent on the 120 records written before it existed, and absent MEANS full.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "analyzer_version",
+            "bit_depth",
+            "channels",
+            "dc_offset",
+            "folder",
+            "length_seconds",
+            "lossy_source",
+            "name",
+            "path",
+            "sample_rate",
+            "source_format",
+            "sub",
+            "trailing_silence_ms"
+          ],
+          "properties": {
+            "analysis_depth": {
+              "type": "string"
+            },
+            "analyzer_version": {
+              "type": "string"
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "analyzer-peak",
+                ""
+              ],
+              "description": "What this document is, said by the document — `peak::PEAK_FORMAT`. Not `required`, and the empty string is legal, only because the 147 tracked records predate the field; a re-scan is what fills them, and both allowances come out together when it lands."
+            },
+            "schema_version": {
+              "type": "string",
+              "enum": [
+                "1.1.0",
+                ""
+              ],
+              "description": "The SHAPE's semver — `peak::PEAK_SCHEMA_VERSION`, which moves when a field here is added, renamed or dropped, unlike `analyzer_version`, which moves on every rebuild. Same empty-string allowance as `format`, for the same records."
+            },
+            "bit_depth": {
+              "type": "integer"
+            },
+            "channels": {
+              "type": "integer"
+            },
+            "dc_offset": {
+              "type": "number"
+            },
+            "folder": {
+              "type": "string"
+            },
+            "length_seconds": {
+              "type": "number"
+            },
+            "lossy_source": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "sample_rate": {
+              "type": "integer"
+            },
+            "source_format": {
+              "type": "string"
+            },
+            "sub": {
+              "type": "string"
+            },
+            "trailing_silence_ms": {
+              "type": "number"
+            }
+          }
+        },
+        "musicality": {
+          "description": "Pitch, root and tempo, in the analyzer's spelling. NOT the lens sidecar's `musicality`, which shares the name and none of the fields. `note_root_key_beat_marker_map` is `note_map.rs`'s output and carries SIX keys — it has no `total_chunks`, which is the one key `SamplerEditor` reads that the map does not supply.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "beats_per_minute",
+            "chromagram",
+            "pitch_hz",
+            "pitch_slope_semitones_per_second",
+            "root_cents_offset",
+            "root_frequency_hz",
+            "root_midi_note",
+            "root_note_name"
+          ],
+          "properties": {
+            "beats_per_minute": {
+              "type": "number"
+            },
+            "chromagram": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "note_root_key_beat_marker_map": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "beat_markers",
+                "chunk_maps",
+                "global_bpm",
+                "global_midi_note",
+                "global_root_note",
+                "total_beats"
+              ],
+              "properties": {
+                "beat_markers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "bar",
+                      "beat",
+                      "index",
+                      "is_downbeat",
+                      "sample_index",
+                      "timestamp_seconds"
+                    ],
+                    "properties": {
+                      "bar": {
+                        "type": "integer"
+                      },
+                      "beat": {
+                        "type": "integer"
+                      },
+                      "index": {
+                        "type": "integer"
+                      },
+                      "is_downbeat": {
+                        "type": "boolean"
+                      },
+                      "sample_index": {
+                        "type": "integer"
+                      },
+                      "timestamp_seconds": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                },
+                "chunk_maps": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "cents_offset",
+                      "chunk_index",
+                      "duration_seconds",
+                      "end_seconds",
+                      "nearest_beat_index",
+                      "peak_amplitude",
+                      "pitch_hz",
+                      "root_frequency_hz",
+                      "root_midi_note",
+                      "root_note_name",
+                      "start_seconds"
+                    ],
+                    "properties": {
+                      "cents_offset": {
+                        "type": "number"
+                      },
+                      "chunk_index": {
+                        "type": "integer"
+                      },
+                      "duration_seconds": {
+                        "type": "number"
+                      },
+                      "end_seconds": {
+                        "type": "number"
+                      },
+                      "nearest_beat_index": {
+                        "type": "integer"
+                      },
+                      "peak_amplitude": {
+                        "type": "number"
+                      },
+                      "pitch_hz": {
+                        "type": "number"
+                      },
+                      "root_frequency_hz": {
+                        "type": "number"
+                      },
+                      "root_midi_note": {
+                        "type": "integer"
+                      },
+                      "root_note_name": {
+                        "type": "string"
+                      },
+                      "start_seconds": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                },
+                "global_bpm": {
+                  "type": "number"
+                },
+                "global_midi_note": {
+                  "type": "integer"
+                },
+                "global_root_note": {
+                  "type": "string"
+                },
+                "total_beats": {
+                  "type": "integer"
+                }
+              }
+            },
+            "pitch_hz": {
+              "type": "number"
+            },
+            "pitch_slope_semitones_per_second": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "root_cents_offset": {
+              "type": "number"
+            },
+            "root_frequency_hz": {
+              "type": "number"
+            },
+            "root_midi_note": {
+              "type": "integer"
+            },
+            "root_note_name": {
+              "type": "string"
+            }
+          }
+        },
+        "preview": {
+          "description": "The only waveform peak data in any `.PEAK` in this repository: min/max sample bins, base64. Absent from the 120 records written before `Pipeline/preview.rs`.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "bin_count",
+            "bits_per_value",
+            "channel_mode",
+            "peak_data_base64",
+            "preview_version",
+            "samples_per_bin"
+          ],
+          "properties": {
+            "bin_count": {
+              "type": "integer"
+            },
+            "bits_per_value": {
+              "type": "integer"
+            },
+            "channel_mode": {
+              "type": "string"
+            },
+            "peak_data_base64": {
+              "type": "string"
+            },
+            "preview_version": {
+              "type": "integer"
+            },
+            "samples_per_bin": {
+              "type": "integer"
+            }
+          }
+        },
         "regions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["index", "start_seconds", "end_seconds", "duration_seconds"],
-            "properties": {
-              "index": {"type": "integer", "minimum": 0},
-              "start_seconds": {"type": "number"},
-              "end_seconds": {"type": "number"},
-              "duration_seconds": {"type": "number"},
-              "peak_amplitude": {"type": "number"},
-              "name": {"type": "string"},
-              "analysis": {"type": ["object", "null"]}
+          "description": "Sounding stretches bounded by silence, and the detector's own settings. `regions[].analysis` is a WHOLE nested record of just that sub-clip — the recursion this schema `$ref`s itself for — and is null when the region was not analyzed in depth.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "count",
+            "detection_threshold_decibels",
+            "minimum_region_seconds",
+            "minimum_silence_seconds",
+            "regions"
+          ],
+          "properties": {
+            "count": {
+              "type": "integer"
+            },
+            "detection_threshold_decibels": {
+              "type": "number"
+            },
+            "minimum_region_seconds": {
+              "type": "number"
+            },
+            "minimum_silence_seconds": {
+              "type": "number"
+            },
+            "regions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "analysis",
+                  "duration_seconds",
+                  "end_seconds",
+                  "index",
+                  "name",
+                  "peak_amplitude",
+                  "start_seconds"
+                ],
+                "properties": {
+                  "analysis": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/$defs/record"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "duration_seconds": {
+                    "type": "number"
+                  },
+                  "end_seconds": {
+                    "type": "number"
+                  },
+                  "index": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "peak_amplitude": {
+                    "type": "number"
+                  },
+                  "start_seconds": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "spectral_features": {
+          "description": "Spectrum, dynamics and loudness. `lufs` is EBU R128 integrated with -70 as the agreed unmeasurable sentinel (`peak::lufs_unmeasurable`); `true_peak_dbtp` and `loudness_range_lu` arrived with PLAN-313.01 and are absent from the 182 records written before it — `check_r128.py` counts that absence as UNMEASURED and never as a pass.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "band_limit_high_hz",
+            "clipping_density",
+            "complexity",
+            "crest_factor",
+            "distortion",
+            "harmonicity",
+            "high_band_energy",
+            "inharmonicity",
+            "low_band_energy",
+            "lufs",
+            "mel_frequency_cepstral_coefficients",
+            "mid_band_energy",
+            "mid_rms",
+            "partial_count",
+            "root_mean_square_level",
+            "side_rms",
+            "spectral_centroid_deviation_hz",
+            "spectral_centroid_hz",
+            "spectral_centroid_mean_hz",
+            "spectral_centroid_slope_hz_per_second",
+            "spectral_entropy",
+            "spectral_flatness",
+            "spectral_flux",
+            "spectral_rolloff_hz",
+            "spectral_slope_db_per_octave",
+            "stationarity",
+            "syllabic_modulation_energy",
+            "total_harmonic_distortion",
+            "voicing_ratio",
+            "zero_crossings_per_second"
+          ],
+          "properties": {
+            "band_limit_high_hz": {
+              "type": "number"
+            },
+            "clipping_density": {
+              "type": "number"
+            },
+            "complexity": {
+              "type": "number"
+            },
+            "crest_factor": {
+              "type": "number"
+            },
+            "distortion": {
+              "type": "string"
+            },
+            "harmonicity": {
+              "type": "number"
+            },
+            "high_band_energy": {
+              "type": "number"
+            },
+            "inharmonicity": {
+              "type": "number"
+            },
+            "loudness_range_lu": {
+              "type": "number"
+            },
+            "low_band_energy": {
+              "type": "number"
+            },
+            "lufs": {
+              "type": "number"
+            },
+            "mel_frequency_cepstral_coefficients": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "mid_band_energy": {
+              "type": "number"
+            },
+            "mid_rms": {
+              "type": "number"
+            },
+            "partial_count": {
+              "type": "integer"
+            },
+            "root_mean_square_level": {
+              "type": "number"
+            },
+            "side_rms": {
+              "type": "number"
+            },
+            "spectral_centroid_deviation_hz": {
+              "type": "number"
+            },
+            "spectral_centroid_hz": {
+              "type": "number"
+            },
+            "spectral_centroid_mean_hz": {
+              "type": "number"
+            },
+            "spectral_centroid_slope_hz_per_second": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "spectral_entropy": {
+              "type": "number"
+            },
+            "spectral_flatness": {
+              "type": "number"
+            },
+            "spectral_flux": {
+              "type": "number"
+            },
+            "spectral_rolloff_hz": {
+              "type": "number"
+            },
+            "spectral_slope_db_per_octave": {
+              "type": "number"
+            },
+            "stationarity": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "syllabic_modulation_energy": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "total_harmonic_distortion": {
+              "type": "number"
+            },
+            "true_peak_dbtp": {
+              "type": "number"
+            },
+            "voicing_ratio": {
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "zero_crossings_per_second": {
+              "type": "number"
+            }
+          }
+        },
+        "ucs": {
+          "description": "Universal Category System v2.1 verdict, in the analyzer's spelling. NOT the lens sidecar's `ucs`, which shares the name and none of the fields. `synonyms` empty means the verdict rests on acoustic signal alone with no name evidence.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "alternatives",
+            "category",
+            "confidence",
+            "id",
+            "reason",
+            "subcategory",
+            "synonyms"
+          ],
+          "properties": {
+            "alternatives": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "category",
+                  "id",
+                  "probability",
+                  "subcategory",
+                  "synonyms"
+                ],
+                "properties": {
+                  "category": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "probability": {
+                    "type": "number"
+                  },
+                  "subcategory": {
+                    "type": "string"
+                  },
+                  "synonyms": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "category": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "subcategory": {
+              "type": "string"
+            },
+            "synonyms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "unsupervised": {
+          "description": "k-means cluster id and PCA coordinates. `cluster` is -1 on a sidecar read back from disk: clustering is global and re-run every scan.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cluster",
+            "principal_components"
+          ],
+          "properties": {
+            "cluster": {
+              "type": "integer"
+            },
+            "principal_components": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
             }
           }
         }
       }
-    },
-    "preview": {"type": "object"},
-    "bioacoustic_syntax": {"type": ["object", "null"]}
+    }
   }
 }

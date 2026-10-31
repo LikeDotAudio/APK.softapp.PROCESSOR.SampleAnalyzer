@@ -52,9 +52,12 @@ by tag `sdk-v0.5`. Both are patched back to local paths by locally excluded `.ca
 files in the monorepo, and by `--config` in `Docker/Dockerfile`.
 
 ## The published record — `schema/peak.schema.json`
-The `.PEAK` record (sidecar, cloud file, worker result) is described by the JSON Schema in
-`schema/`, version `PEAK_SCHEMA_VERSION` = `metadata.schema_version` (`src/Core/schema.rs`).
-`schema::validate` checks the subset the file uses; tests: `an_analysed_record_satisfies_the_published_schema`
+The `.PEAK` record (sidecar, cloud file, worker result) is described by the strict JSON Schema in
+`schema/` (`$id` …/analyzer-peak/1.1.0, moved here from Scanalyzer's `analyzerPeakSchema.json`).
+Records declare `metadata.format` = `PEAK_FORMAT` and `metadata.schema_version` =
+`PEAK_SCHEMA_VERSION` (`src/Core/schema.rs`; must equal the `$id`'s semver). `schema::validate`
+checks the subset the file uses (`type`, `required`, `properties`, `additionalProperties`,
+`items`, `enum`, `oneOf`, local `$ref`); tests: `an_analysed_record_satisfies_the_published_schema`
 (library) and `the_result_is_a_record_of_the_published_peak_schema` (worker).
 
 ## Upload — `db.rs`

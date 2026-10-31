@@ -14,7 +14,8 @@ use crate::peak::{Region, Regions};
 pub(super) fn region(index: usize, start: f64, duration: f64, kind: usize) -> Region {
     let mut p = crate::peak::Peak {
         metadata: crate::peak::Metadata {
-            schema_version: crate::schema::PEAK_SCHEMA_VERSION,
+            format: crate::schema::PEAK_FORMAT.to_string(),
+            schema_version: crate::schema::PEAK_SCHEMA_VERSION.to_string(),
             analyzer_version: String::new(),
             name: String::new(),
             folder: String::new(),

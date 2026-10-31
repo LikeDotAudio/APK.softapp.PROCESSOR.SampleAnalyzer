@@ -379,10 +379,8 @@ mod tests {
             LIMITS,
         );
         assert_eq!(out["ok"], true, "{out}");
-        assert_eq!(
-            out["result"]["metadata"]["schema_version"].as_u64(),
-            Some(oa_sample_analyzer::schema::PEAK_SCHEMA_VERSION as u64)
-        );
+        assert_eq!(out["result"]["metadata"]["schema_version"], oa_sample_analyzer::schema::PEAK_SCHEMA_VERSION);
+        assert_eq!(out["result"]["metadata"]["format"], oa_sample_analyzer::schema::PEAK_FORMAT);
         if let Err(errors) = oa_sample_analyzer::schema::validate(&out["result"]) {
             panic!("the worker's result breaks peak.schema.json: {errors:#?}");
         }

@@ -22,10 +22,14 @@ fn lufs_from_json<'de, D: Deserializer<'de>>(d: D) -> Result<f64, D::Error> {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Metadata {
-    /// The `.PEAK` schema version (`schema/peak.schema.json`, `crate::schema`). 0 on
-    /// records written before the schema was published.
+    /// What this document is — `crate::schema::PEAK_FORMAT`. Empty on records written
+    /// before the declaration existed (a record must not claim one it never made).
     #[serde(default)]
-    pub schema_version: u32,
+    pub format: String,
+    /// The `.PEAK` shape's semver — `crate::schema::PEAK_SCHEMA_VERSION`, the version of
+    /// `schema/peak.schema.json`. Empty on records written before it.
+    #[serde(default)]
+    pub schema_version: String,
     pub analyzer_version: String,
     pub name: String,
     pub folder: String,
