@@ -35,13 +35,10 @@ COPY ["PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine/build.rs",   "./P
 COPY ["PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine/src",        "./PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine/src"]
 COPY ["PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.soundfx.UCS/categories",             "./PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.soundfx.UCS/categories"]
 COPY ["PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json", "./PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.soundfx.UCS/producer_synonyms.json"]
-# The tool: the analyzer crate (manifest, build script, source) and the
-# worker crate in its SRC/.
+# The tool: the analyzer crate (SRC/core: manifest, build script, schema,
+# source) and the worker crate (SRC/).
 ARG TOOL=PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer
-COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/Cargo.toml", "./PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/Cargo.toml"]
-COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/build.rs",   "./PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/build.rs"]
-COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/schema",     "./PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/schema"]
-COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/src",        "./PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/src"]
+# (SRC/core is the analyzer crate, SRC/ the worker; the one COPY carries both.)
 COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/SRC",        "./PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/SRC"]
 
 # The three git names, patched to the copied paths (the SRC/.cargo/config.toml a

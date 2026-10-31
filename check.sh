@@ -11,8 +11,8 @@
 # upload allow-list rule, and the worker's job/result/topic tests.
 set -euo pipefail
 cd "$(dirname "$0")"
-cargo test --quiet
-cargo test --quiet --manifest-path SRC/Cargo.toml
+( cd SRC/core && cargo test --quiet )   # the analyzer crate
+( cd SRC && cargo test --quiet )        # the worker
 echo "check.sh: analyzer + worker tests OK"
 if [[ "${1:-}" == "--live" ]]; then
   SRC/probe_job.sh

@@ -21,6 +21,9 @@ A standalone Git repository, mounted as a submodule at `PODS/POD.THIN/Softapps/P
 | Scanalyzer WASM engine (`SCANALYZER_SUITE/SCANALYZER.Like.audio/Web_Front/wasm_analyzer`) | Path dependency; the same analysis compiled for the browser (`db` is excluded on `wasm32`) |
 | The worker `Worker-SAMPLE_ANALYZER` (`SRC/`, `Docker/`; pod `PODS/POD.workers`) | Path dependency; calls `analyze::analyze` on one file posted as a job on the bus and answers with its `.PEAK` record |
 
+### Layout
+The analyzer crate is `SRC/core/` (manifest, `build.rs`, `schema/`, `src/`, `examples/`); the worker crate is `SRC/` beside it (POD.task shape: no loose crate at the stack root — SDK audit CC-03, 2026-10-30). Paths below (`src/…`, `build.rs`, `schema/…`) are relative to `SRC/core/`.
+
 ### Build-time inputs (`build.rs`)
 Two sibling repositories feed the build:
 
@@ -79,13 +82,13 @@ The worker links `apk-plugin-runner` and `apkaudio-contracts` from APK.plugin.SD
 
 ### Build and test
 ```bash
-cargo build --release          # → target/release/oa_sample_analyzer
+(cd SRC/core && cargo build --release)   # → <target>/release/oa_sample_analyzer
 ./check.sh                     # both crates' tests (analyzer + worker, incl. the .PEAK schema contract)
 ./check.sh --live              # ... plus SRC/probe_job.sh against the running worker
 ```
 
 ### The `.PEAK` record is a published format
-[`schema/peak.schema.json`](schema/peak.schema.json) (`analyzer-peak` 1.1.0, strict: `additionalProperties: false` at every level) is the contract every reader holds — the Scanalyzer front end, the corpus API, clients of the worker's `incoming/result`. It moved here from Scanalyzer's `Web_Front/src/analyzerPeakSchema.json` (2026-10-30): the format's owner keeps its schema. Every record declares itself: `metadata.format` = `analyzer-peak`, `metadata.schema_version` = the shape's semver (`PEAK_FORMAT` / `PEAK_SCHEMA_VERSION` in `src/Core/schema.rs`), which moves when a field is added, renamed or dropped. `metadata.analyzer_version` stays what it was: "does this record need re-analysis". `oa_sample_analyzer::schema::{PEAK_SCHEMA, validate}` hand the schema and a checker to any crate that links this one; tests hold an analysed record and the worker's result to it.
+[`schema/peak.schema.json`](SRC/core/schema/peak.schema.json) (`analyzer-peak` 1.1.0, strict: `additionalProperties: false` at every level) is the contract every reader holds — the Scanalyzer front end, the corpus API, clients of the worker's `incoming/result`. It moved here from Scanalyzer's `Web_Front/src/analyzerPeakSchema.json` (2026-10-30): the format's owner keeps its schema. Every record declares itself: `metadata.format` = `analyzer-peak`, `metadata.schema_version` = the shape's semver (`PEAK_FORMAT` / `PEAK_SCHEMA_VERSION` in `src/Core/schema.rs`), which moves when a field is added, renamed or dropped. `metadata.analyzer_version` stays what it was: "does this record need re-analysis". `oa_sample_analyzer::schema::{PEAK_SCHEMA, validate}` hand the schema and a checker to any crate that links this one; tests hold an analysed record and the worker's result to it.
 
 ### CLI
 ```

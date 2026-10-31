@@ -1,5 +1,7 @@
 # Architecture — PROCESSOR.SampleAnalyzer
 
+> The analyzer crate lives in `SRC/core/`, the worker in `SRC/`; `src/…`, `build.rs` and `schema/…` below are relative to `SRC/core/`.
+
 ← [Wiki home](../README.md)
 
 One crate, `oa-sample-analyzer`: a library plus the `oa_sample_analyzer` CLI. The repo
