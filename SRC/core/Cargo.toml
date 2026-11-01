@@ -23,7 +23,7 @@ serde_json = "1"
 # dependency, not a build-dependency, because `links` metadata reaches only the
 # build script of a package that depends on the linking package directly. In the
 # monorepo the locally excluded .cargo/config.toml patches it to the sibling folder.
-apk-ucs-bundle = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.soundfx.UCS", rev = "f838404d34f3964400cd04610df8417c7db12779" }
+apk-ucs-bundle = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.soundfx.UCS", rev = "79e7f7490d6cffde7688a7eefbbea64741cae4d5" }
 # The shared cutting DSP — regions.rs delegates region detection here so the stored .PEAK
 # regions and the interactive web Extractor run one implementation (no TS/Rust drift),
 # and `extractor_engine::PeakRegion` is the one definition of a .PEAK region.
@@ -31,7 +31,7 @@ apk-ucs-bundle = { git = "https://github.com/LikeDotAudio/APK.softapp.DATATYPE.s
 # a clone of this repository builds against exactly this engine. In the monorepo the
 # locally excluded .cargo/config.toml patches the URL back to the sibling folder.
 # Scanalyzer's wasm_extractor / src-tauri pin the SAME rev (one Region type).
-extractor_engine = { git = "https://github.com/LikeDotAudio/APK.softapp.CAPTURE.Extractor-Engine", rev = "e66e6bee0d863adbf94547a615ddbe9fdc431a11" }
+extractor_engine = { git = "https://github.com/LikeDotAudio/APK.softapp.CAPTURE.Extractor-Engine", rev = "5c55ca5518462d68d9fcbd828465fffbf0c5d79e" }
 hound = "3.5"
 rustfft = "6.2"
 walkdir = "2.5"
