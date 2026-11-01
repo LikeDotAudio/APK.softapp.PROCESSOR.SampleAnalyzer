@@ -235,7 +235,11 @@ pub fn run_job_agent(host: &str, port: u16) {
     let answers = client.clone();
     let result_leaf = result_topic.clone();
     let lane = JobLane::start(
-        move |payload| handle_job(payload, limits),
+        move |payload| {
+            // One job taken off outgoing/job and run: this worker's packet (ROAD-3472).
+            apk_plugin_runner::loopback::packet_received();
+            handle_job(payload, limits)
+        },
         move |answer| {
             println!(
                 "🧰 [{MODULE}] job {} → ok={} {} ({} ms)",
@@ -245,7 +249,8 @@ pub fn run_job_agent(host: &str, port: u16) {
                 answer["elapsed_ms"]
             );
             // Blocking is fine here: the event loop drains the request queue.
-            let _ = answers.publish(result_leaf.clone(), QoS::AtLeastOnce, retain, answer.to_string());
+            // Counted, never `let _ =` (ROAD-3472): a refused publish is a failure on /telemetry.
+            apk_plugin_runner::loopback::published(answers.publish(result_leaf.clone(), QoS::AtLeastOnce, retain, answer.to_string()).is_ok());
         },
     );
     println!("🧰 [{MODULE}] worker listening on {job_topic}, answering on {result_topic}");
@@ -260,7 +265,7 @@ pub fn run_job_agent(host: &str, port: u16) {
             Ok(Event::Incoming(Packet::Publish(p))) if p.topic == job_topic => match lane.offer(p.payload.to_vec()) {
                 Ok(()) => {}
                 Err(Refused::Busy(answer)) => {
-                    let _ = client.try_publish(result_topic.clone(), QoS::AtLeastOnce, retain, answer.to_string());
+                    apk_plugin_runner::loopback::published(client.try_publish(result_topic.clone(), QoS::AtLeastOnce, retain, answer.to_string()).is_ok());
                 }
                 Err(Refused::Gone) => {
                     // The job thread died (a panic in a decoder): return, and
@@ -339,6 +344,19 @@ fn busy(payload: &[u8]) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The manifest the binary compiles in parses, declares the loopback port
+    /// and lists every key of config.ini's [sample_analyzer] that code reads (ROAD-3472).
+    #[test]
+    fn the_compiled_in_manifest_parses_and_reads_every_config_key() {
+        let manifest = apkaudio_contracts::embedded_manifest!().expect("agent.toml parses");
+        assert_eq!(manifest.name, MODULE);
+        assert_eq!(manifest.kind, "worker");
+        assert_eq!(manifest.telemetry_port, 8229);
+        let config = apk_plugin_runner::ini_to_json(CONFIG_INI);
+        let keys: Vec<&str> = config[MODULE].as_object().unwrap().keys().map(String::as_str).collect();
+        assert_eq!(manifest.unread_config_keys(keys), Some(0), "a [sample_analyzer] key nothing reads");
+    }
 
     fn job(body: Value) -> Vec<u8> {
         body.to_string().into_bytes()

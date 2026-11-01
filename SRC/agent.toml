@@ -1,0 +1,27 @@
+# Part of the APK.audio project — http://APK.audio — made by Anthony Kuzub
+# MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
+#
+# WHAT THIS AGENT IS, compiled into apk-worker-sample-analyzer by `manifest = "agent.toml"` in
+# src/bin/apk-worker-sample-analyzer.rs (apkaudio_contracts::embedded_manifest!, ROAD-3472). Not
+# read at run time: the image carries the binary, not this file.
+
+[agent]
+name = "sample_analyzer"
+kind = "worker"
+title = "Sample analyzer (Scanalyzer DSP core)"
+status = "live"
+summary = "Answers outgoing/job with incoming/result: analyzes an audio file sent as a job (peak, loudness, spectrum, metadata), under the job's own job_id."
+
+[telemetry]
+# GET /status and GET /telemetry on 127.0.0.1:8229 — `running` until the first
+# job is taken, `serving` after (a packet is one job the job lane actually
+# runs; a job refused `busy` is not counted). The container is bridge-networked,
+# so NODE.BareMetal reads the same counters off the incoming/telemetry tick.
+# APK_TELEMETRY_PORT moves it; 0 turns it off.
+port = 8229
+
+[config]
+# Every key of config.ini's [sample_analyzer] that code reads: raise and enabled by
+# apk-plugin-runner (module_raise, module_enabled), max_job_bytes and max_len_s by src/lib.rs Limits::from_ini. A key added there and not here is counted in
+# `unread_config_keys`.
+reads = ["raise", "enabled", "max_job_bytes", "max_len_s"]
