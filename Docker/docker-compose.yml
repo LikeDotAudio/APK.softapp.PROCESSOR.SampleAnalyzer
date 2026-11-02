@@ -35,6 +35,7 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     read_only: true
+    mem_reservation: 6m
     # The runner's health file and each job's staged audio (removed when the
     # job is answered): the only writable path of a read-only root, sized for
     # one job at max_job_bytes (32 MiB) with room to spare.
