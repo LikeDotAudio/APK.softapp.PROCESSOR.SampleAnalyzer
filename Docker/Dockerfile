@@ -25,6 +25,8 @@ COPY rust-toolchain.toml ./
 # a checkout; the two real directories land where it names.
 COPY ["contracts/rust",   "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/rust"]
 COPY ["contracts/tokens", "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/tokens"]
+# problems.rs include_str!s ../../problems/problems.json — the errors-and-fixes catalogue.
+COPY ["contracts/problems", "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/problems"]
 COPY ["PODS/POD.THICK/DISCOVERY.Engine/SRC/Cargo.toml", "./PODS/POD.THICK/DISCOVERY.Engine/SRC/Cargo.toml"]
 COPY ["PODS/POD.THICK/DISCOVERY.Engine/SRC/RUNNER",     "./PODS/POD.THICK/DISCOVERY.Engine/SRC/RUNNER"]
 # The analyzer's build-time siblings (see the header): the engine, patched to
