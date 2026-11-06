@@ -27,6 +27,12 @@ COPY ["contracts/rust",   "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/rust"]
 COPY ["contracts/tokens", "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/tokens"]
 # problems.rs include_str!s ../../problems/problems.json — the errors-and-fixes catalogue.
 COPY ["contracts/problems", "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/problems"]
+# contracts 2.2.0+ (capture_rule, unit gate) include_str!s these too: the topic grammar the
+# Python package ships, the rig schema and the vectors — the same three DISCOVERY.Engine's
+# image copies (ROAD-3565 there, ROAD-3602 here).
+COPY ["contracts/python/apkaudio_contracts/topic_grammar.json", "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/python/apkaudio_contracts/topic_grammar.json"]
+COPY ["contracts/proto", "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/proto"]
+COPY ["contracts/vectors", "./PODS/POD.THICK/NODE.BareMetal/SRC/contracts/vectors"]
 COPY ["PODS/POD.THICK/DISCOVERY.Engine/SRC/Cargo.toml", "./PODS/POD.THICK/DISCOVERY.Engine/SRC/Cargo.toml"]
 COPY ["PODS/POD.THICK/DISCOVERY.Engine/SRC/RUNNER",     "./PODS/POD.THICK/DISCOVERY.Engine/SRC/RUNNER"]
 # The analyzer's build-time siblings (see the header): the engine, patched to
@@ -46,6 +52,12 @@ COPY ["PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer/SRC",        ".
 
 # The three git names, patched to the copied paths (the SRC/.cargo/config.toml a
 # checkout uses is not read here: cargo looks for config from the cwd, /src).
+# NOT --locked (ROAD-3602): the committed Cargo.lock resolves the patched
+# crates from GitHub (the SDK tag, the engine/UCS rev), which is what CI and a
+# clone build. Patching them to the copied paths makes cargo rewrite those
+# lock entries, and --locked refuses that. The rewrite happens in this build
+# stage only, touching just the patched packages: every other crate keeps its
+# committed pin, and the lock in the repository is never changed.
 ARG SDK=https://github.com/LikeDotAudio/APK.plugin.SDK
 ARG ENGINE=https://github.com/LikeDotAudio/APK.softapp.CAPTURE.Extractor-Engine
 ARG UCS=https://github.com/LikeDotAudio/APK.softapp.DATATYPE.soundfx.UCS
@@ -54,9 +66,9 @@ RUN set -e; \
     P2="patch.\"$SDK\".apkaudio-contracts.path=\"PODS/POD.THICK/NODE.BareMetal/SRC/contracts/rust\""; \
     P3="patch.\"$ENGINE\".extractor_engine.path=\"PODS/POD.THIN/Softapps/CAPTURE/CAPTURE.Extractor-Engine\""; \
     P4="patch.\"$UCS\".apk-ucs-bundle.path=\"PODS/POD.THIN/Softapps/DATATYPE/DATATYPE.soundfx.UCS\""; \
-    cargo build --release --locked --config "$P1" --config "$P2" --config "$P3" --config "$P4" \
+    cargo build --release --config "$P1" --config "$P2" --config "$P3" --config "$P4" \
         --manifest-path "$TOOL/SRC/Cargo.toml" --bin apk-worker-sample-analyzer; \
-    cargo build --release --locked --config "$P1" --config "$P2" --config "$P3" --config "$P4" \
+    cargo build --release --config "$P1" --config "$P2" --config "$P3" --config "$P4" \
         --manifest-path "$TOOL/SRC/Cargo.toml" -p apk-plugin-runner --bin apk-plugin-health; \
     mkdir -p /out \
  && cp target/release/apk-worker-sample-analyzer target/release/apk-plugin-health /out/
