@@ -17,6 +17,7 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 [[package]]
 name = "apk-plugin-runner"
 version = "2.0.0"
+source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v2.1#a625b5f6eb569dfc248def98a8d30dc888d00062"
 dependencies = [
  "apkaudio-contracts",
  "libc",
@@ -27,6 +28,7 @@ dependencies = [
 [[package]]
 name = "apk-ucs-bundle"
 version = "8.2.1-apk.1"
+source = "git+https://github.com/LikeDotAudio/APK.softapp.DATATYPE.soundfx.UCS?rev=79e7f7490d6cffde7688a7eefbbea64741cae4d5#79e7f7490d6cffde7688a7eefbbea64741cae4d5"
 
 [[package]]
 name = "apk-worker-sample-analyzer"
@@ -42,7 +44,8 @@ dependencies = [
 
 [[package]]
 name = "apkaudio-contracts"
-version = "2.0.0"
+version = "2.1.0"
+source = "git+https://github.com/LikeDotAudio/APK.plugin.SDK?tag=sdk-v2.1#a625b5f6eb569dfc248def98a8d30dc888d00062"
 dependencies = [
  "regress",
  "serde",
@@ -236,6 +239,7 @@ checksum = "af9673d8203fcb076b19dfd17e38b3d4ae9f44959416ea532ce72415a6020365"
 [[package]]
 name = "extractor_engine"
 version = "2.0.0"
+source = "git+https://github.com/LikeDotAudio/APK.softapp.CAPTURE.Extractor-Engine?rev=5c55ca5518462d68d9fcbd828465fffbf0c5d79e#5c55ca5518462d68d9fcbd828465fffbf0c5d79e"
 dependencies = [
  "serde",
 ]
