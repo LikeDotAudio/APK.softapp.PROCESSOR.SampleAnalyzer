@@ -4,12 +4,14 @@ Is `PROCESSOR.SampleAnalyzer` deployed? Written by `.apk.scripts/smoke.py` from 
 
 ← [Wiki home](../README.md)
 
-**✅ PASS** — 1/1 checks, since 2026-10-30 12:51 EDT
+**❌ FAIL** — 2/3 checks, since 2026-11-12 00:16 EST
 
 | Check | Target | Result | Detail |
 |---|---|---|---|
-| pushed | [APK.softapp.PROCESSOR.SampleAnalyzer](https://github.com/LikeDotAudio/APK.softapp.PROCESSOR.SampleAnalyzer.git) | ✅ | HEAD is on origin |
+| pushed | [APK.softapp.PROCESSOR.SampleAnalyzer](https://github.com/LikeDotAudio/APK.softapp.PROCESSOR.SampleAnalyzer.git) | ❌ | 1 commit(s) not pushed |
+| container | `Worker-SAMPLE_ANALYZER` | ✅ | running, healthy |
+| web | [SRC/core/Cargo.toml](https://apk.audio/APK%3ASoftapps/PROCESSOR/PROCESSOR.SampleAnalyzer/SRC/core/Cargo.toml) | ✅ | HTTP 200 |
 
 Re-run: `python3 .apk.scripts/smoke.py PODS/POD.THIN/Softapps/PROCESSOR/PROCESSOR.SampleAnalyzer`
 
-<!-- smoke:sig 98bb277fddc2 since 2026-10-30 12:51 EDT -->
+<!-- smoke:sig 1aa36bdbdd50 since 2026-11-12 00:16 EST -->
